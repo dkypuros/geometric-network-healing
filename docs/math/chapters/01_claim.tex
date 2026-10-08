@@ -1,0 +1,46 @@
+\chapter{The claim}
+\label{ch:claim}
+
+\section*{Same fault, different response}
+Two cells degrade by the same amount. One carries a stadium on match day; the other carries a
+car park at 3\,a.m. Today both enter the same resolution queue because the network has no
+vocabulary for the difference. Cross-domain triage, deciding whether a service-layer symptom
+comes from the radio, the transport ring or the core, is still largely a human walking three
+dashboards.
+
+Recent industry work on autonomous networks has shown that a graph neural network over a temporal
+digital twin, with a business-intent layer on top and standards-based orchestration below, can
+close that loop at Level~4 autonomy. The public descriptions of such systems are impressive and
+also, on inspection, built from three ingredients:
+
+\begin{enumerate}[nosep]
+  \item a graph database that holds the topology and its history (engineering);
+  \item a graph neural network that reads the topology and the KPI history (mathematics);
+  \item an intent vocabulary that lets business priority reorder remediation (a small optimisation).
+\end{enumerate}
+
+Items 2 and 3 are not proprietary. They are consequences of a general blueprint, geometric deep
+learning~\cite{bronstein2021}: identify the symmetry group of your domain, build layers that respect
+it, pool locally, read out invariantly. This document does that derivation for a telecom network,
+writes down every operator, implements it in open code, and measures it. Item~1 is real engineering
+at operator scale and is discussed honestly in Chapter~\ref{ch:nvidia}, where we describe the NVIDIA
+path (GPU-resident graph storage with WholeGraph, GPU sampling with cuGraph-PyG) that we assume for
+scale-out.
+
+\section*{What is and is not claimed}
+\begin{itemize}[nosep]
+  \item \textbf{Claimed.} The learning stack of a business-aware GNN-healing system is reproducible
+  from the equations in Chapters~\ref{ch:domain}--\ref{ch:intent} by anyone with the topology and the
+  KPI history. Our implementation detects injected silent degradations earlier than static-threshold
+  alarms, ranks the true origin first in the large majority of episodes, and changes the remediation
+  order when revenue changes (Chapter~\ref{ch:experiments}).
+  \item \textbf{Not claimed.} That the synthetic twin is a real network. Its purpose is to be
+  \emph{falsifiable}: every number in Chapter~\ref{ch:experiments} is produced by one command from a
+  fixed seed, and the generator and fault model are the first thing a reader should change.
+  \item \textbf{Not claimed.} Any particular vendor's results. No proprietary data or code is used.
+\end{itemize}
+
+\section*{How to read this}
+Each chapter ends in numbered equations. Appendix~\ref{app:map} maps every equation to the Python
+module that implements it. Chapter~\ref{ch:experiments} is generated from the repository's
+\code{results/results.md}. If you change an equation, change the module, rerun, and the table changes.

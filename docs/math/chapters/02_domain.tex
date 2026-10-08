@@ -1,0 +1,95 @@
+\chapter{The domain}
+\label{ch:domain}
+
+\section{A network as a heterogeneous directed graph}
+\begin{definition}[Network graph]
+A network is a tuple $G=(\V,\E,\tau,\rho)$ where $\V$ is a finite set of $N$ nodes,
+$\E\subseteq\V\times\V$ a set of directed edges, $\tau:\V\to\Tset$ a node-type map and
+$\rho:\E\to\Rel$ an edge-relation map.
+\begin{equation}
+G=(\V,\E,\tau,\rho),\qquad
+\Tset=\{\textsf{cell},\textsf{gnb},\textsf{router},\textsf{link},\textsf{upf},\textsf{amf},\textsf{smf},\textsf{service}\}.
+\label{eq:graph}
+\end{equation}
+\end{definition}
+
+Three choices in \eqref{eq:graph} matter and are easy to get wrong.
+
+\paragraph{Edges point in the direction a fault propagates.} An edge $v\to u$ means ``a
+degradation at $v$ is felt at $u$''. A fibre link feeds a router; a core router feeds an aggregation
+router; an aggregation router backhauls a gNB; a gNB serves cells; the AMF controls gNBs; the SMF
+controls UPFs; a core router feeds a UPF; a UPF terminates services; cells carry services. This
+is the \emph{causal} orientation, not the traffic orientation, and it is what makes
+Chapter~\ref{ch:propagation} a diffusion and Chapter~\ref{ch:inverse} an inverse problem.
+
+\paragraph{Links are nodes.} A transport link carries its own KPIs (latency, loss, utilisation)
+and can be the origin of a fault. Modelling it as an edge attribute would make it impossible to
+name as a root cause. So links are first-class nodes of type \textsf{link} with a single outgoing
+relation to the router they feed.
+
+\paragraph{Relations are typed.} $\Rel$ has nine members. ``Link feeds router'' and ``AMF controls
+gNB'' must not share a weight matrix: a signalling storm and a fibre cut leave different
+signatures on their neighbours.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  >=Latex, node distance=9mm,
+  n/.style={draw, rounded corners=2pt, minimum width=14mm, minimum height=6.5mm, font=\small, thick},
+  ran/.style={n, draw=ran, fill=ran!8}, tra/.style={n, draw=tra, fill=tra!8},
+  core/.style={n, draw=core, fill=core!10}, svc/.style={n, draw=svc, fill=svc!8},
+  e/.style={->, thick, draw=ink!70}
+]
+\node[core] (amf) {amf};
+\node[core, right=of amf] (smf) {smf};
+\node[core, below=of smf] (upf) {upf};
+\node[tra, left=22mm of upf] (rc) {router (core)};
+\node[tra, below=of rc] (ra) {router (agg)};
+\node[tra, left=of ra] (lk) {link};
+\node[ran, below=of ra] (gnb) {gnb};
+\node[ran, below=of gnb] (cell) {cell};
+\node[svc, right=22mm of cell] (s) {service};
+\draw[e] (lk) -- (ra) node[midway, above, font=\scriptsize] {feeds};
+\draw[e] (rc) -- (ra) node[midway, right, font=\scriptsize] {feeds};
+\draw[e] (ra) -- (gnb) node[midway, right, font=\scriptsize] {backhauls};
+\draw[e] (gnb) -- (cell) node[midway, right, font=\scriptsize] {serves};
+\draw[e] (amf) to[out=200, in=160] node[pos=0.5, left, font=\scriptsize] {controls} (gnb);
+\draw[e] (smf) -- (upf) node[midway, right, font=\scriptsize] {controls};
+\draw[e] (rc) -- (upf) node[midway, above, font=\scriptsize] {feeds};
+\draw[e] (upf) -- (s) node[midway, right, font=\scriptsize] {terminates};
+\draw[e] (cell) -- (s) node[midway, above, font=\scriptsize] {carries};
+\begin{scope}[on background layer]
+\node[draw=ran!60, dashed, rounded corners, fit=(gnb)(cell), inner sep=4pt, label={[ran, font=\scriptsize]left:RAN}] {};
+\node[draw=tra!60, dashed, rounded corners, fit=(rc)(ra)(lk), inner sep=4pt, label={[tra, font=\scriptsize]left:Transport}] {};
+\node[draw=core!70, dashed, rounded corners, fit=(amf)(smf)(upf), inner sep=4pt, label={[core, font=\scriptsize]above:Core}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{The node types and relations of \eqref{eq:graph}. Arrows point in the direction a fault
+propagates. A service is the trigger surface: a service-layer symptom is the only input the
+healing loop needs.}
+\label{fig:domain}
+\end{figure}
+
+\section{Adjacency and signals}
+Let $A\in\{0,1\}^{N\times N}$ be the cause$\to$effect adjacency and $A_r$ its restriction to
+relation $r\in\Rel$:
+\begin{equation}
+A_{vu}=\ind{(v,u)\in\E},\qquad A=\sum_{r\in\Rel}A_r,\qquad
+\N_r(v)=\{u:(u,v)\in\E,\ \rho(u,v)=r\}.
+\label{eq:adjacency}
+\end{equation}
+Each node carries a KPI vector $x_v(t)\in\R^K$ at discrete time $t$, standardised so that nominal
+behaviour is near zero. We use $K=4$ (throughput, latency, loss, utilisation) for every type; the
+tensors stay rectangular and the \emph{direction} in which degradation shows up is what differs by
+type (Chapter~\ref{ch:propagation}). The full state is a signal on the graph,
+\begin{equation}
+X(t)\in\R^{N\times K},\qquad X_{v\cdot}(t)=x_v(t).
+\label{eq:signal}
+\end{equation}
+
+\section{Business value as a node attribute}
+Every cell $c$ carries a revenue density $\mathrm{rev}_c\ge 0$. It is heavy-tailed on purpose
+(log-normal in the generator): a few cells carry most of the revenue, which is the regime where
+``same fault, different response'' is not a slogan but a measurable reordering
+(Chapter~\ref{ch:intent}). Revenue is an attribute of the twin, not of the model: the model never
+sees it, and that separation is the whole design.

@@ -1,0 +1,42 @@
+\chapter{The closed loop}
+\label{ch:closed}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[>=Latex, node distance=7mm,
+  b/.style={draw, thick, rounded corners=2pt, minimum height=9mm, minimum width=30mm, font=\small, align=center},
+  e/.style={->, thick, draw=ink!70}]
+\node[b, draw=core, fill=core!8] (biz) {Business intent\\ $R(v)/c(v)$ under $B$ \eqref{eq:selection}};
+\node[b, draw=ran, fill=ran!8, below=of biz] (gnn) {Graph intelligence\\ $\hat d,\ z$ on $G$ \eqref{eq:heads}};
+\node[b, draw=tra, fill=tra!8, below=of gnn] (exe) {Execution\\ intent $\to$ service orders $\to$ domain actions};
+\node[b, draw=svc, fill=svc!8, right=22mm of gnn] (twin) {Temporal twin\\ $X(t)$, $A$, $\mathrm{rev}$};
+\draw[e] (twin) -- (gnn) node[midway, above, font=\scriptsize] {KPI windows};
+\draw[e] (gnn) -- (biz) node[midway, right, font=\scriptsize] {ranking, $\hat d$};
+\draw[e] (biz) to[out=180, in=180] node[midway, left, font=\scriptsize] {ordered intent} (exe);
+\draw[e] (exe) -| node[pos=0.25, below, font=\scriptsize] {remediation applied} (twin);
+\end{tikzpicture}
+\caption{Three layers around a twin. The only input is the KPI stream; the only output is an
+ordered set of per-domain actions.}
+\end{figure}
+
+\section{Decomposition}
+An intent with $n$ ordered targets decomposes into $n$ service orders, one per target, each
+carrying the domain (RAN, Core, Transport), the target node and the remediation operation. In the
+repository the intent is TMF921-shaped and the orders are TMF641-shaped: the field names follow
+the standards so that a real orchestrator could be substituted for the mock, but we do not claim
+conformance to either specification. The mock orchestrator records each order and returns the
+step at which the highest-priority action takes effect.
+
+\section{Measuring the loop}
+The twin makes the loop measurable. We re-simulate the same fault with the injection removed from
+the effective remediation step onward and record the recovery time, and we integrate the
+revenue-weighted degradation over the episode:
+\begin{equation}
+\mathrm{Loss}=\sum_{t}\sum_{u\in\V}\mathrm{rev}_u\,d_u(t).
+\label{eq:exposure}
+\end{equation}
+Comparing \eqref{eq:exposure} for a GNN-timed remediation against a threshold-timed one turns the
+lead time of Chapter~\ref{ch:detection} into a business number on the same twin. If the model's
+top-ranked origin is wrong, the remediation is applied to the wrong node, the injection is not
+removed, and the GNN-timed loss is \emph{not} reduced; the metric therefore penalises wrong
+root causes rather than rewarding confident ones.

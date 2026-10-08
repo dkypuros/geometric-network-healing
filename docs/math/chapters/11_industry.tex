@@ -1,0 +1,49 @@
+\chapter{Relation to the industry design}
+\label{ch:industry}
+
+Public material from a 2026 TM~Forum Moonshot Catalyst on business-aware GNN healing
+(C26.0.965) describes a production-grade system of the same shape as this repository. We built
+ours independently from the blueprint, then compared. The comparison is useful in both directions:
+it shows which parts of the industry system are mathematics that anyone can reproduce, and it
+shows what we deliberately left out.
+
+\section{Stage by stage}
+\begin{center}\small
+\begin{tabular}{@{}p{2.2cm}p{5.8cm}p{6.2cm}@{}}
+\toprule
+Stage & Industry design & This repository \\
+\midrule
+Trigger & Service-layer $z$-score against a clean multi-week baseline with a confirmation gate; the GNN does not detect. &
+Same service-layer trigger implemented as a baseline (\code{service\_zscore\_trigger}); the GNN degradation field \eqref{eq:detection} is offered as a graph-aware alternative and measured against it. \\[2pt]
+Localise & Link prediction: anomaly nodes live in the property graph and the model scores ``originates-from'' edges, traversed in reverse from symptoms to origin. &
+Node scoring with a softmax over all nodes \eqref{eq:rca}. Equivalent for a single incident (Remark~\ref{rem:linkpred}); transposed relations in \eqref{eq:rgcn} are the reverse traversal. \\[2pt]
+Prioritise & Utility $=$ profile weight $\times$ revenue-density index $\times$ service impact, banded into a priority; a change-risk concurrency policy executes one major change at a time. &
+$R(v)=\sum_u w_u\,\mathrm{rev}_u\,\hat d_u$ over the blast radius, divided by resource cost, under a budget with one change per domain \eqref{eq:selection}. Their utility is the single-node special case. \\[2pt]
+Execute & TMF921 v5 healing intent decomposed into TMF641 v5 service orders, executed by a vendor orchestration engine. &
+TMF921- and TMF641-shaped objects (field names, not conformance) executed by a mock orchestrator against the simulator. \\[2pt]
+Verify & A reflection stage re-runs inference, reports complies/degrades, re-triggers without human escalation. &
+Re-simulation with the remediation applied; if the field does not recover, re-trigger with the next ranked candidate \eqref{eq:exposure}. \\[2pt]
+Training data & A 13-stage schema-faithful generator: scripted temporal arcs, domain-specific signal fingerprints, topology-driven blast radii, root-cause vs symptom labels. &
+A diffusion model on the causal graph \eqref{eq:propagation} with type-specific effect vectors \eqref{eq:observation}; origin and latent field as labels. Less schema fidelity, more physics. \\[2pt]
+Scale substrate & A managed temporal graph database and a managed GNN training service. &
+NVIDIA path: WholeGraph, cuGraph-PyG, cuDF (Chapter~\ref{ch:nvidia}); durable store left to the reader. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{What transfers and what does not}
+Everything in the Trigger, Localise, Prioritise and Verify rows is mathematics and is in this
+repository with tests. The Execute row is plumbing that any orchestrator can provide. The two
+things the industry system has that this repository does not are a production-identical schema for
+its synthetic corpus, which makes fine-tuning on real incidents a no-translation step, and the
+standards contributions themselves (an intent-ontology extension, a new assessment questionnaire,
+a proposed lead-time indicator). Neither affects the claim of Chapter~\ref{ch:claim}; both matter
+for deployment.
+
+\section{One honest difference in the detection story}
+The industry trigger is a service-layer statistic. That is a sensible production choice: it is
+cheap, explainable, and needs no labels. Our results (Chapter~\ref{ch:experiments}) test whether a
+graph-aware detector fires earlier on the same episodes with the same calibrated false-alarm
+budget, because it reads the \emph{pattern across neighbours} rather than a single node's
+deviation. That is an extension of the industry design, not a replication of it, and we report it
+as such, including the cases where it does not win.

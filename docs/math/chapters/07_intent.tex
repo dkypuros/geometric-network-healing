@@ -1,0 +1,55 @@
+\chapter{Business intent as constrained selection}
+\label{ch:intent}
+
+\section{Separation of concerns}
+The model of Chapters~\ref{ch:symmetry}--\ref{ch:inverse} never sees revenue. It outputs a
+ranking of candidate origins and an estimated degradation field. Everything about \emph{which}
+remediation runs first when recovery resources are constrained lives in a separate layer with its
+own vocabulary. This is the decoupling that a business-intent extension to an intent ontology
+provides: the operator declares priority in business terms; the network implementation does not
+change.
+
+\section{Revenue at risk}
+Let $\mathrm{rev}_u\ge0$ be the revenue density attached to node $u$ (nonzero on cells, zero
+elsewhere in our twin; a real deployment attaches it wherever revenue is measured), let
+$w_u\ge0$ be an operator-declared profile weight from a small catalogue (mass-event venue, transit
+hub, enterprise-critical, residential), and let $\mathrm{reach}(v)$ be the forward closure of $v$
+along cause$\to$effect edges, the blast radius.
+\begin{equation}
+\mathrm{rev},\,w:\V\to\R_{\ge0},\qquad \mathrm{reach}(v)=\{u:\ v\leadsto u\}\cup\{v\}.
+\label{eq:revenue}
+\end{equation}
+The revenue at risk of a candidate origin $v$ is the weighted revenue in its blast radius, scaled by
+the estimated degradation there:
+\begin{equation}
+R(v)=\sum_{u\in\mathrm{reach}(v)}w_u\,\mathrm{rev}_u\,\max\big(0,\hat d_u(t)\big).
+\label{eq:rar}
+\end{equation}
+With $w\equiv1$ this is pure revenue density. With a catalogue of weights and a single-node blast
+radius it reduces to the ``profile weight $\times$ revenue density $\times$ service impact''
+utility used in industry intent extensions, where $\hat d_u$ plays the role of service impact.
+Two candidate origins with identical network signatures but different downstream revenue get
+different $R$. That is the entire mechanism behind ``same fault, different response''.
+
+\section{Selection under a budget}
+Each candidate $v$ induces a remediation branch with a resource cost $c(v)$ determined by its type
+(resetting a cell is cheap, scaling a core function is not). Given the top-$k$ root-cause
+candidates and a budget $B$ of recovery resources, the executed order is the greedy solution of
+\begin{equation}
+\max_{S\subseteq\text{top-}k}\ \sum_{v\in S}R(v)\quad\text{s.t.}\quad\sum_{v\in S}c(v)\le B,
+\qquad\text{executed in decreasing order of }R(v)/c(v),
+\label{eq:selection}
+\end{equation}
+with at most one high-risk change per domain per healing cycle (a change-risk concurrency policy);
+the remaining branches are held as ranked fallbacks for the verify stage. This is a knapsack with a
+ratio-greedy heuristic, deliberately simple so that an operator can read the rule in one line and
+change it. The output is serialised as an intent object whose targets
+carry domain, action, priority, revenue at risk and resource units, in the shape of a TMF921
+intent with a business-priority extension.
+
+\begin{remark}[What the business layer does not do]
+It does not move the root-cause ranking. If the model is wrong about the origin, revenue
+weighting makes the wrong remediation run first with more conviction. The guard against that is
+the counterfactual check of Chapter~\ref{ch:inverse} and the recovery measurement of
+Chapter~\ref{ch:closed}, not the intent layer.
+\end{remark}

@@ -1,0 +1,40 @@
+[project]
+name = "gnn-healing"
+version = "0.1.0"
+description = "Geometric deep learning for business-aware, self-healing telecom networks. Open math, open code, NVIDIA-accelerated."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11,<3.14"
+authors = [{ name = "David Kypuros" }]
+keywords = ["geometric-deep-learning", "gnn", "telecom", "autonomous-networks", "root-cause-analysis", "nvidia", "cugraph"]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "networkx>=3.2",
+  "torch>=2.6",
+  "torch-geometric>=2.6",
+  "pyyaml>=6.0",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+# NVIDIA acceleration is installed separately (Linux + CUDA 12), see docs/nvidia.md:
+#   make setup-nvidia      ->  uv pip install -r requirements-nvidia.txt --extra-index-url https://pypi.nvidia.com
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+gnn-healing = "gnn_healing.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gnn_healing"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

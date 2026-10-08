@@ -1,0 +1,15 @@
+\chapter{Reproducing every number}
+\label{app:repro}
+\begin{lstlisting}
+git clone https://github.com/dkypuros/geometric-network-healing
+cd geometric-network-healing
+make setup          # uv venv, CPU PyTorch + PyG
+make test           # 6 tests incl. the equivariance check
+make pipeline       # twin -> simulate -> baselines -> GNN -> intent -> closed loop
+cat results/results.md
+make pdf            # this document
+\end{lstlisting}
+The pipeline is seeded; \code{--seed} changes the twin, the episodes and the initialisation
+together. \code{--episodes}, \code{--epochs}, \code{--T}, \code{--window}, \code{--budget} are the
+knobs most worth turning. On a CUDA host, \code{make setup-nvidia} adds the RAPIDS stack and
+\code{gnn-healing backend} reports what was detected.

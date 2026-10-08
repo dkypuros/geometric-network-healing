@@ -1,0 +1,42 @@
+\chapter{Silent degradation without alarms}
+\label{ch:detection}
+
+\section{What an alarm is}
+A static alarm fires when some KPI of some node leaves a fixed band for a short run:
+\begin{equation}
+t_{\mathrm{alarm}}=\min\Big\{t:\ \exists v,\ \max_k|x_{vk}(t')|>\theta_{\mathrm{static}}\ \ \forall t'\in[t-m+1,t]\Big\}.
+\label{eq:alarm}
+\end{equation}
+It is graph-free and history-free. Under \eqref{eq:observation} it fires when
+$d_v e_{\tau(v),k}$ plus noise exceeds $\theta_{\mathrm{static}}$ at a single node, which in the silent
+regime is late. A per-node rolling $z$-score replaces the fixed band with a rolling one; it is
+earlier but, under the AR(1) noise of \eqref{eq:nominal}, it is also wrong often. Both are
+baselines in Chapter~\ref{ch:experiments}.
+
+\section{Two graph-aware scores}
+The network of Chapter~\ref{ch:symmetry} gives two per-node quantities. The forecast residual is
+label-free:
+\begin{equation}
+r_v(t)=x_v(t)-\hat x_v(t),\qquad \hat x_v(t)\ \text{from \eqref{eq:heads} on the window }[t-W,t-1].
+\label{eq:residual}
+\end{equation}
+It is the right score when no labelled history exists. Its weakness is that a one-step forecaster
+on a slow ramp absorbs the drift: the residual is the per-step increment, not the accumulated
+degradation. The degradation estimate uses the twin's latent field as supervision and reads the
+accumulated state directly:
+\begin{equation}
+a(t)=\max_{v\in\V}\hat d_v(t),\qquad
+t_{\mathrm{gnn}}=\min\{t:\ a(t')>\theta\ \ \forall t'\in[t-m+1,t]\}.
+\label{eq:detection}
+\end{equation}
+The threshold $\theta$ is not a KPI threshold. It is calibrated once on nominal episodes as a
+margin above the largest $\hat d$ the model ever produced on healthy data, so false alarms on
+healthy calibration data are zero by construction. In production the calibration set is the
+operator's healthy history; the supervision for $\hat d$ comes from labelled incidents or from a
+simulator of the operator's own topology.
+
+\begin{remark}[No alarm is required]
+Nothing in \eqref{eq:detection} refers to a per-node band. The detector looks at the whole field
+$\hat d(t)$, which the network computes from the KPI windows of every node and their causal
+neighbourhoods. A service-layer symptom with no alarm anywhere is a valid trigger.
+\end{remark}

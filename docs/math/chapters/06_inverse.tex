@@ -1,0 +1,71 @@
+\chapter{Root cause as an inverse problem}
+\label{ch:inverse}
+
+\section{The forward map and its ill-posedness}
+Unrolling \eqref{eq:propagation} from onset, the degradation field is a linear function of the
+injection history,
+\begin{equation}
+d(t)=\sum_{k=0}^{t-t_0}M^{k}\,\mathbf 1_{v_0}\,s(t-k),\qquad M=\rho I+\beta P,\quad P=D_{\mathrm{in}}^{-1}A^{\top}.
+\label{eq:forward}
+\end{equation}
+The root-cause question is: given noisy observations of $X$ (not $d$), recover $v_0$. This is an
+inverse problem on the graph and it is ill-posed in the usual ways. Two origins with the same
+downstream reach are indistinguishable from their effects alone (a link and the router it feeds
+differ only in the link's own KPIs). The observation \eqref{eq:observation} mixes $d$ with diurnal
+and coloured noise. And $M^k$ smooths: the impulse response spreads over $k$ hops, so late
+observations carry less positional information than early ones.
+
+What the structure of \eqref{eq:forward} tells us is which inductive biases a learned inverse must
+contain. The adjoint of the forward operator is $M^\top=\rho I+\beta P^\top$, which propagates
+information effect$\to$cause along the transposed relations. That is why $\Rel^{\top}$ is in
+\eqref{eq:rgcn}: a network without transposes can only smooth downstream and cannot localise.
+
+\section{Learned inverse}
+We do not invert \eqref{eq:forward} analytically; real networks are not exactly linear, the
+observation noise is not exactly Gaussian, and the ramp is unknown. We learn a conditional
+distribution over origins from the relational embedding. With the logit $z_v(t)$ from
+\eqref{eq:heads},
+\begin{equation}
+p(v_0=v\mid X_{[t-W,t)},G)=\frac{\exp z_v(t)}{\sum_{u\in\V}\exp z_u(t)},
+\label{eq:rca}
+\end{equation}
+and the root-cause ranking at time $t$ is $\V$ sorted by $z_v(t)$ descending. The softmax is over
+\emph{all nodes of all types}: the network is asked ``which single node'' across RAN, Core and
+Transport, which is the cross-domain triage question.
+
+\begin{remark}[Node scoring is link prediction with one anomaly node]
+\label{rem:linkpred}
+A common production formulation adds an \emph{anomaly} node $a$ to the property graph, connected
+to every symptomatic entity, and trains a link predictor to score the edge $a\to v$ labelled
+``originates from''. With a bilinear scorer $z_v=h_a^{\top}Mh_v$ and a single anomaly node per
+incident, $h_a$ is a constant for the episode and $z_v$ is a linear read-out of $h_v$: exactly
+\eqref{eq:heads}. The two formulations differ only when several concurrent incidents must be
+attributed separately, in which case the anomaly-node version is the natural generalisation.
+\end{remark}
+
+\begin{remark}[Equivariance makes the ranking well defined]
+Because $z$ is a per-node output of an equivariant map \eqref{eq:equivariance}, relabelling the
+network permutes the ranking consistently. The claim ``node 17 is the root cause'' is really the
+claim ``the node with this history and this neighbourhood is the root cause'', which is what an
+operator means.
+\end{remark}
+
+\section{Loss}
+The three heads are trained jointly on windows drawn from simulated episodes,
+\begin{equation}
+\mathcal L=\underbrace{\frac1{NK}\norm{\hat X(t)-X(t)}_F^2}_{\text{forecast}}
++\underbrace{\frac1N\norm{\hat d(t)-d(t)}_2^2}_{\text{degradation}}
++\lambda\,\underbrace{\ind{t\ge t_0+\delta}\big(-\log p(v_0\mid\cdot)\big)}_{\text{root cause}},
+\label{eq:loss}
+\end{equation}
+with the root-cause term switched on $\delta$ steps after onset, when some signal has
+accumulated, and switched off entirely on nominal episodes. The forecast term is included even
+though detection uses $\hat d$: it is label-free, it regularises the embedding toward the KPI
+dynamics, and it is the term that survives when a deployment has no incident labels.
+
+\section{Counterfactual check}
+Because the twin is explicit, a ranking can be verified rather than trusted: remove the injection
+at the top-ranked node and re-simulate. If the field decays, the ranking was right. The closed loop
+of Chapter~\ref{ch:closed} does exactly this, and the exposure numbers in
+Chapter~\ref{ch:experiments} are computed from the re-simulation, not from the model's own
+confidence.

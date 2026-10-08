@@ -1,0 +1,2 @@
+/Users/davidkypuros/Documents/Git_Offline/active/90.open-ai-experiments_BOOKMARK/94_tmforum_google_verizon/geometric-network-healing/.venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(

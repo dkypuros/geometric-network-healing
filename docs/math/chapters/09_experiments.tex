@@ -1,0 +1,53 @@
+\chapter{Experiments}
+\label{ch:experiments}
+
+Every number below is produced by \code{make pipeline} from a fixed seed and rendered into this
+chapter by \code{scripts/results\_to\_tex.py}. Change an equation, change the module, rerun, and
+the table changes.
+
+\section{Protocol}
+A single synthetic twin (Chapter~\ref{ch:domain}) is generated. Episodes of $T$ steps are
+simulated; a fraction are nominal, the rest carry one fault drawn from the catalogue of
+Chapter~\ref{ch:propagation} with a random origin of the matching type, a random onset in
+$[T/4,T/2)$, and a random severity and ramp. Episodes are split 60/15/25 into train, calibration
+and test. The model of Chapter~\ref{ch:symmetry} is trained with the loss \eqref{eq:loss}.
+Every detector, the GNN field detector \eqref{eq:detection}, the service-layer $z$-score trigger,
+and the per-node rolling $z$-score, is calibrated on the \emph{same} nominal calibration episodes
+with the same margin, so each has zero false alarms on calibration data by construction. The
+static threshold is fixed at $2.5$ standardised units.
+
+Metrics (Chapter~\ref{ch:closed} and below): a detector's delay is the first firing at or after
+onset; a firing before onset is counted as a false alarm. Lead time is reported only over episodes
+where the baseline fired, and the detection-rate gap is reported separately.
+\begin{align}
+\text{lead}&=t_{\text{baseline}}-t_{\text{gnn}} \label{eq:leadtime}\\
+\text{hit@}k&=\ind{v_0\in\text{top-}k\text{ of the ranking at }t_{\text{gnn}}+\delta} \label{eq:hitk}\\
+\text{triage@}k&=1-\frac{k}{|\{u:\ d_u(t_{\text{alarm}}+\delta)>0.5\}|} \label{eq:triage}
+\end{align}
+The triage denominator is the set of nodes that are actually degraded when a static alarm would
+have fired: the set a war room would face. Exposure is \eqref{eq:exposure} integrated over the
+episode, with the remediation applied at the GNN-timed step through the verify-and-re-trigger loop,
+or at the threshold-timed step.
+
+\section{Results}
+\input{chapters/09_experiments_table}
+
+\section{Reading the table}
+\begin{itemize}[nosep]
+  \item \textbf{Lead time.} The quantity the industry calls silent-degradation lead time is the
+  GNN-versus-static-threshold row. Positive is earlier. The per-node $z$-score row is the honest
+  comparison with a cheap statistical detector calibrated to the same false-alarm budget.
+  \item \textbf{Root cause.} hit@1 is the fraction of episodes where the single top-ranked node is
+  the injected origin, across all three domains in one softmax.
+  \item \textbf{Healing cycles.} Because a remediation only removes the injection at the true
+  origin, a wrong top-1 costs a cycle. The healed-within-3 rate is the end-to-end success of the
+  loop, not of the model alone.
+  \item \textbf{Exposure.} Revenue-weighted degradation integrated over the episode. The ratio of
+  the two exposure numbers is the business version of the lead time.
+\end{itemize}
+
+\section{What would change these numbers}
+The twin is small and the fault model is simple; both are the first things to vary. Longer ramps
+widen the GNN's advantage; stronger coupling $\beta$ narrows it because symptoms reach the service
+layer sooner. More node types and more relations make hit@1 harder. Real KPI history replaces
+\eqref{eq:nominal} and will be less forgiving than AR(1) noise. None of these change the equations.

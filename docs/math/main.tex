@@ -1,0 +1,88 @@
+\documentclass[11pt,a4paper]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,array,tabularx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{caption}
+
+\definecolor{ran}{HTML}{2B6CB0}
+\definecolor{tra}{HTML}{2F855A}
+\definecolor{core}{HTML}{B7791F}
+\definecolor{svc}{HTML}{805AD5}
+\definecolor{ink}{HTML}{222222}
+\definecolor{rule}{HTML}{BBBBBB}
+
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,frame=single,rulecolor=\color{rule},breaklines=true}
+
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{remark}{Remark}[chapter]
+\newtheorem{assumption}{Assumption}[chapter]
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\E}{\mathcal{E}}
+\newcommand{\Rel}{\mathcal{R}}
+\newcommand{\Tset}{\mathcal{T}}
+\newcommand{\N}{\mathcal{N}}
+\newcommand{\Sym}{\mathrm{Sym}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\ind}[1]{\mathbb{1}\!\left[#1\right]}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\vspace{-2em}\textbf{The Geometry of Network Healing}\\[0.4em]
+\large Geometric deep learning for business-aware, self-healing telecom networks\\[0.3em]
+\normalsize Open mathematics, open code, NVIDIA-accelerated}
+\author{David Kypuros}
+\date{October 2026 \quad\textperiodcentered\quad v0.1}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+A telecom network is not a grid. It is a heterogeneous directed graph whose node labels carry no
+information, whose faults propagate along typed dependency edges, and whose business value is
+concentrated in a few revenue-dense cells. This monograph derives, from the geometric deep learning
+blueprint, the minimal learning system that detects silent degradation without alarms, ranks root
+causes across RAN, Core and Transport from one service-layer trigger, and orders remediation by
+revenue at risk under a resource budget. Every numbered equation maps to a module in the
+accompanying open-source repository, and every claim is measured on a synthetic digital twin with
+injected faults against graph-free baselines. The point is simple: the model is mathematics anyone
+can implement; the operator's moat is the topology and the history, not the network.
+\end{abstract}
+
+\tableofcontents
+
+\input{chapters/01_claim}
+\input{chapters/02_domain}
+\input{chapters/03_symmetry}
+\input{chapters/04_propagation}
+\input{chapters/05_detection}
+\input{chapters/06_inverse}
+\input{chapters/07_intent}
+\input{chapters/08_closed_loop}
+\input{chapters/09_experiments}
+\input{chapters/10_nvidia}
+\input{chapters/11_industry}
+\appendix
+\input{chapters/A_equation_code_map}
+\input{chapters/B_reproduce}
+
+\begin{thebibliography}{9}
+\bibitem{bronstein2021} M.~M. Bronstein, J.~Bruna, T.~Cohen, P.~Veli\v{c}kovi\'c.
+\emph{Geometric Deep Learning: Grids, Groups, Graphs, Geodesics, and Gauges}. arXiv:2104.13478, 2021.
+\bibitem{schlichtkrull2018} M.~Schlichtkrull et al. \emph{Modeling Relational Data with Graph Convolutional Networks}. ESWC 2018.
+\bibitem{hamilton2017} W.~Hamilton, R.~Ying, J.~Leskovec. \emph{Inductive Representation Learning on Large Graphs}. NeurIPS 2017.
+\bibitem{xu2019} K.~Xu, W.~Hu, J.~Leskovec, S.~Jegelka. \emph{How Powerful are Graph Neural Networks?} ICLR 2019.
+\bibitem{fey2019} M.~Fey, J.~E. Lenssen. \emph{Fast Graph Representation Learning with PyTorch Geometric}. ICLR-W 2019.
+\bibitem{tmf921} TM~Forum. \emph{TMF921 Intent Management API} and \emph{TMF641 Service Ordering API}; \emph{Intent Ontology (TIO)}.
+\bibitem{rapids} NVIDIA. \emph{RAPIDS cuGraph, cuGraph-PyG, WholeGraph} documentation.
+\end{thebibliography}
+\end{document}

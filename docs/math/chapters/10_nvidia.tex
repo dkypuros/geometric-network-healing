@@ -1,0 +1,40 @@
+\chapter{The NVIDIA path to scale}
+\label{ch:nvidia}
+
+Everything above runs full-batch on a 74-node twin on a laptop CPU in under two minutes. An
+operator's twin has $10^5$--$10^7$ nodes and the same number of KPI windows per step. The
+mathematics does not change; the execution does. We assume NVIDIA hardware and the RAPIDS
+ecosystem for the scaled deployment and document the path here. The repository's
+\code{docs/nvidia.md} carries the installation and versioning detail.
+
+\section{What changes mathematically: sampling}
+Full-batch evaluation of \eqref{eq:rgcn} touches every edge every step. At scale one evaluates
+the layer on a sampled neighbourhood~\cite{hamilton2017}: for each seed node, draw $f_\ell$
+neighbours per relation at hop $\ell$ and replace the mean over $\N_r(v)$ with the mean over the
+sample. The sampled aggregation is an unbiased estimate of the full one, and
+\eqref{eq:equivariance} still holds in distribution because the sampler is itself index-blind.
+What one loses is the exact $L$-hop receptive field; what one gains is a cost that depends on the
+fan-out $f_1 f_2\cdots f_L$ and the batch, not on $N$.
+
+\section{Where the pieces run}
+\begin{itemize}[nosep]
+  \item \textbf{Graph structure and features in GPU memory.} WholeGraph holds the edge list and
+  the KPI window tensor across GPUs (and across nodes of a DGX system over NVLink/NVSwitch), so
+  sampling and gathering never cross to host memory. This is the twin's \emph{in-memory} form; a
+  durable graph store still owns history and versioning.
+  \item \textbf{Sampling and gathering.} cuGraph-PyG implements PyTorch Geometric's
+  \code{GraphStore}/\code{FeatureStore} and a GPU \code{NeighborLoader}. The same \code{HealingGNN}
+  class consumes its mini-batches; \code{gnn/scale.py} is the adapter.
+  \item \textbf{Data preparation.} cuDF replaces pandas for building the node and edge tables and
+  the rolling KPI windows at scale.
+  \item \textbf{Training.} PyTorch on CUDA; multi-GPU via distributed data parallel with the
+  sampler sharded by seed nodes. Relational convolution kernels are the stock PyG ones; NVIDIA's
+  accelerated message-passing kernels are picked up when installed.
+\end{itemize}
+
+\section{What we did and did not verify}
+The CPU reference path is exercised by the test suite and the pipeline. The cuGraph-PyG and
+WholeGraph path is \emph{documented and import-guarded}, not exercised in this repository's CI,
+because the public release is built and tested on a machine without an NVIDIA GPU. A reader with
+a CUDA 12 Linux host can install the pinned RAPIDS release and run the same pipeline with the
+adapter; we state this plainly rather than imply a scale result we have not measured.

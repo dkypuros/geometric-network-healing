@@ -1,0 +1,95 @@
+\chapter{Fault propagation as directed diffusion}
+\label{ch:propagation}
+
+The learning problem is only well posed if we say what a fault \emph{is}. We commit to a simple,
+explicit generative model. Its purpose is twofold: it produces ground truth for training and
+evaluation, and it is the physical prior that the network of Chapter~\ref{ch:symmetry} is asked to
+invert. Readers with real incident data should replace this chapter with their data; the rest of
+the document does not change.
+
+\section{Injection}
+A fault is a tuple $(v_0,t_0,s,T_r)$: origin node, onset step, peak severity, ramp length. Its
+injection into the network is a ramp,
+\begin{equation}
+s(t)=s\cdot\min\!\Big(1,\ \frac{t-t_0+1}{T_r}\Big)\ind{t\ge t_0}.
+\label{eq:injection}
+\end{equation}
+Long ramps are the \emph{silent} regime: the origin's own KPIs stay inside any static threshold for
+tens of steps while the pattern across its neighbours is already distinctive.
+
+\section{Nominal signal}
+Each KPI follows a diurnal cycle plus coloured noise,
+\begin{equation}
+n_{vk}(t)=a_{vk}\sin\!\Big(\frac{2\pi t}{P}+\varphi_{vk}\Big)+\epsilon_{vk}(t),\qquad
+\epsilon_{vk}(t)=r\,\epsilon_{vk}(t-1)+\eta_{vk}(t),\ \ \eta\sim\mathcal N(0,\sigma^2).
+\label{eq:nominal}
+\end{equation}
+The AR(1) term is what makes per-node $z$-scores unreliable: consecutive excursions are correlated,
+so a graph-free detector that fires on a short run of outliers has a high false-alarm rate
+(Chapter~\ref{ch:experiments}).
+
+\section{Observation model}
+Degradation is a scalar latent field $d(t)\in\R^N_{\ge0}$. It enters the observed KPIs through a
+type-specific effect direction $e_{\tau}\in\R^K$: a congested link shows latency and loss, a
+sleeping cell shows throughput collapse, a signalling storm shows control-plane utilisation.
+\begin{equation}
+x_v(t)=n_v(t)+d_v(t)\,e_{\tau(v)}.
+\label{eq:observation}
+\end{equation}
+
+\section{Propagation}
+The field evolves as a damped, directed heat flow on the cause$\to$effect graph:
+\begin{equation}
+d(t+1)=\rho\,d(t)+\beta\,D_{\mathrm{in}}^{-1}A^{\top}d(t)+s(t)\,\mathbf{1}_{v_0},
+\qquad (D_{\mathrm{in}})_{uu}=\max(1,\textstyle\sum_v A_{vu}).
+\label{eq:propagation}
+\end{equation}
+$\rho$ is memory (a degraded router does not recover in one step), $\beta$ is coupling (how much of
+a cause's degradation its effects inherit per step), and the in-degree normalisation says an
+effect with many causes averages them rather than summing them.
+
+\begin{proposition}[Steady state and attenuation]
+With constant injection $s$ at an origin with no causes of its own, the origin reaches
+$d_{v_0}^{\star}=s/(1-\rho)$, and a node $k$ hops downstream along a single chain reaches
+$d^{\star}_{k}=\big(\tfrac{\beta}{1-\rho}\big)^{k}d^{\star}_{v_0}$.
+Faults attenuate per hop iff
+\begin{equation}
+\frac{\beta}{1-\rho}<1.
+\label{eq:stability}
+\end{equation}
+\end{proposition}
+\begin{proof}
+At steady state $d=\rho d+\beta P d+s\mathbf 1_{v_0}$ with $P=D_{\mathrm{in}}^{-1}A^\top$. For the
+origin, $(Pd)_{v_0}=0$, giving the first claim. For a chain, $(Pd)_k=d_{k-1}$, so
+$d_k(1-\rho)=\beta d_{k-1}$.
+\end{proof}
+
+We set $\rho=0.85$, $\beta=0.10$, so each hop keeps two thirds of its cause's degradation and the
+blast radius of a core fault reaches the service layer with a recognisable but diminished signature.
+The repository asserts \eqref{eq:stability} in its tests; violating it produces an exploding,
+unphysical twin.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=0.09cm, y=1.1cm, >=Latex]
+\draw[->, thick] (0,0) -- (160,0) node[below left, font=\scriptsize] {$t$};
+\draw[->, thick] (0,0) -- (0,3.2) node[left, font=\scriptsize] {$d$};
+\draw[dashed, ink!50] (50,0) -- (50,3) node[above, font=\scriptsize] {$t_0$};
+\draw[dashed, rule] (0,2.5) -- (160,2.5) node[right, font=\scriptsize] {static threshold};
+\draw[thick, tra] plot[smooth] coordinates {(0,0) (50,0) (60,0.6) (70,1.4) (80,2.1) (90,2.6) (100,2.9) (120,3.0) (160,3.0)} node[right, font=\scriptsize] {origin};
+\draw[thick, ran] plot[smooth] coordinates {(0,0) (52,0) (62,0.3) (72,0.8) (82,1.3) (92,1.7) (102,1.9) (122,2.0) (160,2.0)} node[right, font=\scriptsize] {1 hop};
+\draw[thick, svc] plot[smooth] coordinates {(0,0) (54,0) (64,0.15) (74,0.45) (84,0.8) (94,1.1) (104,1.25) (124,1.33) (160,1.33)} node[right, font=\scriptsize] {2 hops};
+\draw[<->, thick, core] (68,2.65) -- (92,2.65) node[midway, above, font=\scriptsize] {lead time};
+\end{tikzpicture}
+\caption{The silent regime of \eqref{eq:injection}--\eqref{eq:propagation}. The origin crosses a
+static threshold late; the joint pattern across hops is distinctive early. That gap is what the
+graph buys.}
+\end{figure}
+
+\section{Why this is a diffusion and why that matters}
+Equation \eqref{eq:propagation} is a discrete heat equation with a directed, degree-normalised
+Laplacian $I-P$ and a source term. The forward map from injection history to the observed field is
+linear and known. The learning problem is therefore not ``find a pattern'' but ``invert a known
+operator from noisy, indirectly observed data'' (Chapter~\ref{ch:inverse}). That framing tells us
+what the network must contain: the transposed relations, since $P^\top$ is the adjoint of the
+propagation operator, and enough depth to span the support of the operator's impulse response.

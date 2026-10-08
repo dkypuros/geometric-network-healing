@@ -1,0 +1,113 @@
+\chapter{Symmetry and the blueprint}
+\label{ch:symmetry}
+
+\section{The symmetry group is permutation, not rotation}
+The geometric deep learning blueprint~\cite{bronstein2021} asks first: under which transformations
+of the input must the answer be unchanged (invariant) or transform predictably (equivariant)? For a
+protein in space the group is $SE(3)$: rotate the molecule and the predicted structure rotates with
+it. For an image it is translation. For a network graph the only freedom in the representation is
+\emph{how we numbered the nodes}. Node 17 is a cell because $\tau(17)=\textsf{cell}$, not because of
+the integer 17.
+
+\begin{definition}[Permutation action]
+Let $\Sym(N)$ act on a network by relabelling. For $\pi\in\Sym(N)$ with permutation matrix $P_\pi$,
+\begin{equation}
+\pi\cdot(X,A,\tau)=(P_\pi X,\ P_\pi A P_\pi^{\top},\ \tau\circ\pi^{-1}).
+\label{eq:action}
+\end{equation}
+\end{definition}
+
+\begin{assumption}[Equivariance requirement]
+A per-node predictor $f$ (forecast, degradation, root-cause score) must satisfy
+\begin{equation}
+f(\pi\cdot(X,A,\tau))=P_\pi\,f(X,A,\tau)\qquad\forall\,\pi\in\Sym(N),
+\label{eq:equivariance}
+\end{equation}
+and a graph-level quantity (``is there a fault anywhere'') must be invariant, $f(\pi\cdot\,\cdot)=f(\cdot)$.
+\end{assumption}
+
+This is not a nicety. A model that violates \eqref{eq:equivariance} has learned something about
+the integer labels, which carry no information, and will fail on the same network exported with a
+different ordering. The test suite checks \eqref{eq:equivariance} numerically on the implemented
+model (\code{tests/test\_model.py}).
+
+\begin{remark}[Where the gauge story does and does not apply]
+Lectures on geometric deep learning spend a long time on $SO(3)$, gauge transformations and
+manifolds because those are the hard cases: there, the symmetry acts on the \emph{feature values}
+as well as on positions, and one needs irreducible representations and spherical harmonics to
+build equivariant layers. For a network, the group acts only on the \emph{indexing}. Permutation
+equivariance is achieved by a structural rule, below, and nothing more exotic is needed. We note
+this because it is tempting to reach for heavier machinery than the problem demands.
+\end{remark}
+
+\section{Message passing is the equivariant operator class}
+\begin{proposition}[Local aggregation is equivariant]
+Any layer of the form
+\begin{equation}
+h_v^{(\ell+1)}=\phi\Big(h_v^{(\ell)},\ \bigoplus_{u\in\N(v)}\psi\big(h_u^{(\ell)},h_v^{(\ell)},e_{uv}\big)\Big),
+\label{eq:mp}
+\end{equation}
+with $\bigoplus$ a permutation-invariant aggregator (sum, mean, max) and $\phi,\psi$ shared across
+nodes, satisfies \eqref{eq:equivariance}.
+\end{proposition}
+\begin{proof}
+$\phi$ and $\psi$ are applied node-wise with shared parameters, so relabelling nodes relabels their
+outputs. $\N(v)$ is defined by $A$, which transforms as $P_\pi A P_\pi^\top$, so the neighbourhood
+of node $\pi(v)$ in the relabelled graph is the relabelled neighbourhood of $v$; invariance of
+$\bigoplus$ to the order of its arguments finishes the argument.
+\end{proof}
+
+\section{Relational form with transposed relations}
+We instantiate \eqref{eq:mp} as a relational graph convolution~\cite{schlichtkrull2018} because
+the relations in $\Rel$ carry different physics. Crucially, we also include the \emph{transpose} of
+every relation. A fault propagates cause$\to$effect, but inferring the cause from observed effects
+requires information to flow effect$\to$cause (Chapter~\ref{ch:inverse}). With
+$\Rel'=\Rel\cup\Rel^{\top}$, $|\Rel'|=2|\Rel|$:
+\begin{equation}
+h_v^{(\ell+1)}=h_v^{(\ell)}+\sigma\!\left(\mathrm{LN}\!\left(W_0^{(\ell)}h_v^{(\ell)}+\sum_{r\in\Rel'}\ \frac{1}{|\N_r(v)|}\sum_{u\in\N_r(v)}W_r^{(\ell)}h_u^{(\ell)}\right)\right).
+\label{eq:rgcn}
+\end{equation}
+The residual connection and layer norm are optimisation conveniences and do not affect
+\eqref{eq:equivariance}. Mean aggregation keeps the scale independent of degree, which matters
+because a core router has many more effect-neighbours than a cell.
+
+\section{Input encoding and read-outs}
+The input to the first layer is a window of $W$ past KPI vectors plus a learned type embedding:
+\begin{equation}
+h_v^{(0)}=\mathrm{MLP}\big(\mathrm{vec}\,[x_v(t-W),\dots,x_v(t-1)]\big)+E_{\tau(v)},
+\qquad E\in\R^{|\Tset|\times d}.
+\label{eq:input}
+\end{equation}
+After $L$ layers each node holds $h_v^{(L)}\in\R^d$ that summarises its own history and its
+$L$-hop causal neighbourhood in both directions. Three linear read-outs, shared across nodes,
+produce the quantities the rest of the system consumes:
+\begin{equation}
+\hat x_v(t)=W_f h_v^{(L)}\in\R^K,\qquad
+\hat d_v(t)=w_d^{\top}h_v^{(L)}\in\R,\qquad
+z_v(t)=w_z^{\top}h_v^{(L)}\in\R.
+\label{eq:heads}
+\end{equation}
+$\hat x$ is a one-step forecast (self-supervised), $\hat d$ an estimate of the latent degradation
+field of Chapter~\ref{ch:propagation}, and $z$ a root-cause logit used in Chapter~\ref{ch:inverse}.
+
+\begin{remark}[Depth equals causal reach]
+$L$ layers see $L$ hops. The longest causal chain in Figure~\ref{fig:domain} is
+link$\to$router$_\text{core}$$\to$router$_\text{agg}$$\to$gNB$\to$cell$\to$service, five hops. We use
+$L=3$ with transposes, which lets a service-layer symptom and a transport-layer origin exchange
+information in one forward pass through the shared router. For larger topologies $L$ should track
+the diameter of the dependency graph, or sampling should be used (Chapter~\ref{ch:nvidia}).
+\end{remark}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[>=Latex, node distance=6mm,
+  b/.style={draw, thick, rounded corners=2pt, minimum height=8mm, minimum width=26mm, font=\small, align=center},
+  e/.style={->, thick, draw=ink!70}]
+\node[b] (sym) {symmetry\\ $\Sym(N)$ on indices};
+\node[b, right=of sym] (lay) {equivariant layers\\ relational MP \eqref{eq:rgcn}};
+\node[b, right=of lay] (pool) {local pooling\\ mean over $\N_r(v)$};
+\node[b, right=of pool] (ro) {invariant read-outs\\ $\hat x,\ \hat d,\ z$ \eqref{eq:heads}};
+\draw[e] (sym) -- (lay); \draw[e] (lay) -- (pool); \draw[e] (pool) -- (ro);
+\end{tikzpicture}
+\caption{The blueprint instantiated. Nothing in the pipeline refers to a node's integer id.}
+\end{figure}
