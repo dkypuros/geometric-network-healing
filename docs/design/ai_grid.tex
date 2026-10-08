@@ -6,34 +6,34 @@
 \begin{tikzpicture}[arch, x=1cm, y=1cm]
 % Three columns: edge site (x=0), metro hub (x=7.5), orchestration (x=13.5). Row pitch 1.85 (box 1.05 + sm 0.8).
 \node[lane, anchor=south, text width=5cm, align=center] at (0, 1.35)    {Edge site $\times S$ (cell site / edge POP)};
-\node[lane, anchor=south, text width=5cm, align=center] at (8.6, 1.35)  {Metro hub (regional)};
-\node[lane, anchor=south, text width=5cm, align=center] at (15.4, 1.35) {Orchestration \& domains};
+\node[lane, anchor=south, text width=5cm, align=center] at (9.4, 1.35)  {Metro hub (regional)};
+\node[lane, anchor=south, text width=5cm, align=center] at (16.8, 1.35) {Orchestration \& domains};
 
 % ---- edge site card (one shown, ghost behind suggests S sites)
 \node[learn, minimum width=4.6cm, text width=4.2cm] (ran) at (0, 0)     {AI-RAN baseband (Aerial)\\ \sub{same GPU as the models below}};
 \node[learn, minimum width=4.6cm, text width=4.2cm] (sgnn) at (0, -1.85) {Site GNN under Triton\\ \sub{23-node subgraph: PSA, LADN, cells, gNBs + boundary}};
-\node[exec,  minimum width=4.6cm, text width=4.2cm] (sdec) at (0, -3.7)  {Agent decode worker (Dynamo)\\ \sub{per-incident reasoning for this site}};
-\node[note, text width=4.4cm] (kpi) at (0, -5.45) {KPI windows never leave the site};
+\node[exec,  minimum width=4.6cm, text width=4.2cm] (sdec) at (0, -4.15)  {Agent decode worker (Dynamo)\\ \sub{per-incident reasoning for this site}};
+\node[note, text width=4.4cm] (kpi) at (0, -5.9) {KPI windows never leave the site};
 
 % ---- metro hub
-\node[learn, minimum width=4.6cm, text width=4.2cm] (rgnn) at (8.6, 0)     {Regional GNN (full graph)\\ \sub{merges site summaries; localises regional origins (core, I-UPF, AMF/SMF)}};
-\node[biz,   minimum width=4.6cm, text width=4.2cm] (biem) at (8.6, -1.85) {BIEM selection across sites\\ \sub{$R(v)/c(v)$, SSC-mode cost, one change per domain}};
-\node[exec,  minimum width=4.6cm, text width=4.2cm] (dyn)  at (8.6, -3.7)  {Dynamo router + prefill worker\\ \sub{KV-aware routing; shared context prefilled once}};
+\node[learn, minimum width=4.6cm, text width=4.2cm] (rgnn) at (9.4, 0)     {Regional GNN (full graph)\\ \sub{merges site summaries;\\ regional origins: core, I-UPF, AMF, SMF}};
+\node[biz,   minimum width=4.6cm, text width=4.2cm] (biem) at (9.4, -1.85) {BIEM selection across sites\\ \sub{$R(v)/c(v)$, SSC-mode cost, one change per domain}};
+\node[exec,  minimum width=4.6cm, text width=4.2cm] (dyn)  at (9.4, -4.15)  {Dynamo router + prefill worker\\ \sub{KV-aware routing; shared context prefilled once; OpenAI-compatible API}};
 
 % ---- orchestration
-\node[exec, minimum width=4.6cm, text width=4.2cm] (orc) at (15.4, -1.85) {Orchestrator\\ \sub{TMF921-shaped intent $\to$ TMF641-shaped orders}};
-\node[base, minimum width=4.6cm, text width=4.2cm] (dom) at (15.4, -3.7)  {Domain actions\\ \sub{RAN $\cdot$ Core $\cdot$ Transport $\cdot$ Edge: relocate PSA, LADN fallback}};
+\node[exec, minimum width=4.6cm, text width=4.2cm] (orc) at (16.8, -1.85) {Orchestrator\\ \sub{TMF921-shaped intent $\to$ TMF641-shaped orders}};
+\node[base, minimum width=4.6cm, text width=4.2cm] (dom) at (16.8, -4.15)  {Domain actions\\ \sub{RAN $\cdot$ Core $\cdot$ Transport $\cdot$ Edge: relocate PSA, LADN fallback}};
 
 % ---- primary flows
-\draw[flow-a] (sgnn.east) -- ++(1.6,0) -- ++(0,1.85) node[eq, pos=0.5, right, align=left] {site summary:\\ $\max_v \hat d_v$ + top-3 $(v,z_v)$\\ 7 scalars / step} -- (rgnn.west);
+\draw[flow-a] (sgnn.east) -- ++(2.4,0) -- ++(0,1.85) node[eq, pos=0.5, align=center] {site summary\\ $\max_v \hat d_v$ + top-3 $(v,z_v)$\\ 7 scalars / step} -- (rgnn.west);
 \draw[flow-a] (rgnn) -- (biem);
-\draw[flow-a] (biem) -- (orc) node[eq, midway, above] {ordered intent};
+\draw[flow-a] (biem) -- (orc) node[eq, midway, align=center] {ordered\\ intent};
 \draw[flow-a] (orc) -- (dom);
 % ---- agents (dotted = reasoning / substrate), KV transfer (dashed = data)
-\draw[flow-c] (dyn) -- (biem) node[eq, midway, right, xshift=1mm] {agent reasoning (OpenAI-compatible API)};
-\draw[flow-b, <->] (sdec) -- (dyn) node[eq, midway, above] {KV cache via NIXL over the grid fabric};
+\draw[flow-c] (dyn) -- (biem) node[eq, midway, right, xshift=1mm] {agent reasoning};
+\draw[flow-b, <->] (sdec) -- (dyn) node[eq, midway, align=center] {KV cache\\ via NIXL};
 % ---- feedback: remediation lands at the site (dash-dot)
-\draw[flow-d] (dom.south) -- ++(0,-2.35) -- ++(-15.4,0) node[eq, pos=0.5, below] {remediation applied at the site; twin re-verified; re-trigger on failure} -- (kpi.south);
+\draw[flow-d] (dom.south) -- ++(0,-2.3) -- ++(-16.8,0) node[eq, pos=0.5, below] {remediation applied at the site; twin re-verified; re-trigger on failure} -- (kpi.south);
 
 \begin{scope}[on background layer]
 \node[draw=black!35, dashed, rounded corners=6pt, line width=\wRegular, fit=(ran)(sdec), inner sep=6pt, xshift=3mm, yshift=3mm] {};
@@ -42,7 +42,7 @@
 \node[draw=cBiz!60, dashed, rounded corners=6pt, line width=\wRegular, fit=(rgnn)(dyn), inner sep=6pt] {};
 \node[draw=cExec!60, dashed, rounded corners=6pt, line width=\wRegular, fit=(orc)(dom), inner sep=6pt] {};
 \end{scope}
-\node[font=\sffamily\bfseries] at (7.7, 2.5) {geometric-network-healing on an AI grid (branch edge-ai-grid)};
-\node[note] at (7.7, 2.05) {solid = primary flow \quad dashed = data \quad dotted = reasoning \quad dash-dot = feedback \quad GNN at the site, Dynamo for the agents, KPIs stay local};
+\node[font=\sffamily\bfseries] at (8.4, 2.5) {geometric-network-healing on an AI grid (branch edge-ai-grid)};
+\node[note] at (8.4, 2.05) {solid = primary flow \quad dashed = data \quad dotted = reasoning \quad dash-dot = feedback \quad GNN at the site, Dynamo for the agents, KPIs stay local};
 \end{tikzpicture}
 \end{document}
