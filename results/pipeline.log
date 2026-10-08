@@ -1,52 +1,66 @@
 /Users/davidkypuros/Documents/Git_Offline/active/90.open-ai-experiments_BOOKMARK/94_tmforum_google_verizon/geometric-network-healing/.venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
   warnings.warn(
 backend: {"torch": "2.14.1", "cuda_available": false, "device": "cpu", "torch_geometric": "2.8.0.post1", "cugraph_pyg": null, "pylibwholegraph": null, "cudf": null}
-twin: 74 nodes, 130 directed edges, 260 message-passing edges incl. transposes
-{'cell': 36, 'gnb': 12, 'router': 8, 'link': 8, 'service': 6, 'upf': 2, 'amf': 1, 'smf': 1}
+twin: 93 nodes, 198 directed edges, 396 message-passing edges incl. transposes
+{'cell': 36, 'gnb': 12, 'service': 12, 'router': 8, 'link': 8, 'psa': 6, 'ladn': 6, 'upf': 2, 'amf': 1, 'smf': 1, 'iupf': 1}
 episodes: train 120  test 40  nominal calibration 8
-epoch   0  forecast 0.1910  degradation 0.0594  rca 0.4173
-epoch   5  forecast 0.1037  degradation 0.0076  rca 0.1573
-epoch  10  forecast 0.1020  degradation 0.0061  rca 0.0319
-epoch  15  forecast 0.1008  degradation 0.0054  rca 0.0124
-epoch  20  forecast 0.1007  degradation 0.0054  rca 0.0378
-epoch  25  forecast 0.0999  degradation 0.0047  rca 0.0107
-epoch  29  forecast 0.0986  degradation 0.0035  rca 0.0001
-calibrated on 8 nominal episodes: GNN theta = 1.139, service z = 4.14, per-node z = 7.95 (same margin, zero false alarms on calibration)
+epoch   0  forecast 0.1751  degradation 0.0473  rca 0.3893
+epoch   5  forecast 0.1035  degradation 0.0063  rca 0.0988
+epoch  10  forecast 0.1010  degradation 0.0049  rca 0.0063
+epoch  15  forecast 0.0988  degradation 0.0036  rca 0.0090
+epoch  20  forecast 0.0985  degradation 0.0033  rca 0.0003
+epoch  25  forecast 0.1004  degradation 0.0045  rca 0.0668
+epoch  29  forecast 0.0982  degradation 0.0029  rca 0.0003
+calibrated on 8 nominal episodes: GNN theta = 0.665, service z = 4.87, per-node z = 7.89 (same margin, zero false alarms on calibration)
+edge partition: 6 sites, subgraph sizes [23, 23, 23, 23, 23, 23], theta_edge = 0.590
 # Results
 
-Twin: 74 nodes, 130 edges. Fault episodes: 32, nominal: 8. Runtime 643.8 s.
+Twin: 93 nodes, 198 edges. Fault episodes: 33, nominal: 7. Runtime 1605.0 s.
 
 | metric | value |
 |---|---|
 | detection rate, GNN | 1.00 |
-| detection rate, static threshold | 1.00 |
-| detection rate, service-layer z-score (calibrated z=4.1 / textbook z=3) | 0.00 / 0.31 |
-| detection rate, per-node z-score (calibrated z=8.0 / textbook z=3) | 0.00 / 1.00 |
-| false alarms on 8 nominal episodes: GNN / threshold / service z cal. / service z=3 / node z cal. / node z=3 | 0 / 0 / 0 / 4 / 0 / 8 |
-| pre-onset false alarms on 32 fault episodes: same order | 0 / 0 / 0 / 3 / 0 / 30 |
-| mean detection delay after onset (steps): GNN / static threshold | 22.9 / 32.6 |
-| mean detection delay after onset (steps): service z cal. / service z=3 / node z cal. / node z=3 | nan / 56.2 / nan / 9.6 |
-| mean lead time of GNN vs static threshold (steps, where it fired) | 9.8 |
-| mean lead time of GNN vs service z (calibrated / z=3) | nan / 32.0 |
-| mean lead time of GNN vs per-node z (calibrated / z=3) | nan / -13.3 |
+| detection rate, static threshold | 0.97 |
+| detection rate, service-layer z-score (calibrated z=4.9 / textbook z=3) | 0.03 / 0.58 |
+| detection rate, per-node z-score (calibrated z=7.9 / textbook z=3) | 0.00 / 1.00 |
+| false alarms on 7 nominal episodes: GNN / threshold / service z cal. / service z=3 / node z cal. / node z=3 | 0 / 0 / 0 / 1 / 0 / 7 |
+| pre-onset false alarms on 33 fault episodes: same order | 1 / 0 / 0 / 4 / 0 / 33 |
+| mean detection delay after onset (steps): GNN / static threshold | 21.6 / 35.8 |
+| mean detection delay after onset (steps): service z cal. / service z=3 / node z cal. / node z=3 | 38.0 / 58.6 / nan / 6.9 |
+| mean lead time of GNN vs static threshold (steps, where it fired) | 14.2 |
+| mean lead time of GNN vs service z (calibrated / z=3) | 18.0 / 37.2 |
+| mean lead time of GNN vs per-node z (calibrated / z=3) | nan / -14.6 |
 | healed within 3 verify-and-re-trigger cycles | 1.00 |
 | mean healing cycles | 1.00 |
 | root cause hit@1 | 1.00 |
 | root cause hit@3 | 1.00 |
-| degraded nodes at static-alarm time (war-room set, mean) | 13.9 |
-| triage reduction @3 (share of the war-room set a top-3 RCA list skips) | 0.35 |
-| revenue-weighted exposure, GNN-timed healing | 328.3 |
-| revenue-weighted exposure, threshold-timed healing | 573.1 |
+| degraded nodes at static-alarm time (war-room set, mean) | 15.9 |
+| triage reduction @3 (share of the war-room set a top-3 RCA list skips) | 0.33 |
+| revenue-weighted exposure, GNN-timed healing | 334.2 |
+| revenue-weighted exposure, threshold-timed healing | 815.8 |
+
+## Edge-partitioned inference (AI grid)
+
+| metric | full graph | per-site + regional merge |
+|---|---|---|
+| detection rate | 1.00 | 0.79 |
+| mean detection delay after onset (steps) | 21.6 | 25.3 |
+| root cause hit@1 / hit@3 | 1.00 / 1.00 | 0.76 / 0.76 |
+| hit@1 on site-local faults / on regional faults (19 regional) | - | 1.00 / 0.58 |
+| edge top-1 agrees with full-graph top-1 | - | 0.76 |
+| scalars leaving a site per step (KPIs vs uplinked summary) | 52 | 7 |
 
 ## By fault type
 
 | fault | n | delay GNN | delay thr | delay service z=3 | hit@1 | hit@3 |
 |---|---|---|---|---|---|---|
-| amf_signaling_storm | 7 | 27.9 | 45.0 | 46.5 | 1.00 | 1.00 |
-| fiber_degrade | 7 | 22.7 | 28.6 | 112.0 | 1.00 | 1.00 |
-| router_congestion | 7 | 22.3 | 32.3 | 6.0 | 1.00 | 1.00 |
-| sleeping_cell | 8 | 18.5 | 25.4 | 100.0 | 1.00 | 1.00 |
-| upf_overload | 3 | 24.7 | 33.3 | 65.0 | 1.00 | 1.00 |
+| amf_signaling_storm | 9 | 25.6 | 50.2 | 58.0 | 1.00 | 1.00 |
+| fiber_degrade | 6 | 22.2 | 35.5 | 42.0 | 1.00 | 1.00 |
+| ladn_dn_degrade | 1 | 20.0 | 25.0 | 31.0 | 1.00 | 1.00 |
+| psa_overload | 3 | 20.3 | 23.3 | 15.0 | 1.00 | 1.00 |
+| router_congestion | 5 | 20.4 | 35.0 | 72.0 | 1.00 | 1.00 |
+| sleeping_cell | 2 | 15.0 | 18.0 | 92.0 | 1.00 | 1.00 |
+| upf_overload | 7 | 19.4 | 32.1 | 66.8 | 1.00 | 1.00 |
 
 sample intent: {
  "id": "healing-0",
@@ -56,20 +70,14 @@ sample intent: {
   "@type": "IntentExpression",
   "targets": [
    {
-    "target": "node:35",
-    "domain": "RAN",
-    "action": "cell_reset_and_reparameterize",
-    "priority": 1,
-    "revenueAtRisk": 0.799,
-    "resourceUnits": 1
-   },
-   {
     "target": "node:8",
     "domain": "Core",
     "action": "throttle_and_scale_signaling",
-    "priority": 2,
-    "revenueAtRisk": 1.274,
-    "resourceUnits": 5
+    "priority": 1,
+    "revenueAtRisk": 0.59,
+    "resourceUnits": 5,
+    "site": -1,
+    "detail": ""
    }
   ],
   "expectation": "restore service KPIs to nominal in revenue-priority order"
