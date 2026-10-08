@@ -38,5 +38,16 @@ out += ["\\bottomrule\\end{tabular}\\end{center}",
         f"\\noindent\\textit{{Twin: {r['twin']['nodes']} nodes, {r['twin']['edges']} edges. Detection threshold $\\theta={r['theta']:.3f}$. "
         f"Config: episodes={r['config']['episodes']}, epochs={r['config']['epochs']}, T={r['config']['T']}, window={r['config']['window']}, "
         f"seed={r['config']['seed']}. Runtime {r['runtime_s']}\\,s on CPU.}}"]
+if "edge" in r:
+    e = r["edge"]
+    out += ["", "\\paragraph{Edge-partitioned inference (Chapter~\\ref{ch:edge}).}",
+            "\\begin{center}\\small\\begin{tabular}{@{}p{6.4cm}rr@{}}\\toprule Metric & full graph & per-site + merge \\\\ \\midrule",
+            f"Detection rate & {dr['gnn']:.2f} & {e['detection_rate_edge']:.2f} \\\\",
+            f"Detection delay after onset (steps) & {f('delay_gnn')} & {f('delay_gnn_edge')} \\\\",
+            f"hit@1 / hit@3 & {f('hit@1',2)} / {f('hit@3',2)} & {f('hit@1_edge',2)} / {f('hit@3_edge',2)} \\\\",
+            f"hit@1 on site-local / regional origins ({e['regional_faults']} regional) & -- & {e['hit@1_edge_on_site_faults']:.2f} / {e['hit@1_edge_on_regional_faults']:.2f} \\\\",
+            f"Edge top-1 agrees with full-graph top-1 & -- & {f('edge_agrees_top1',2)} \\\\",
+            f"Scalars leaving a site per step & {f('kpi_scalars_per_site_step',0)} & {f('uplink_scalars_per_site_step',0)} \\\\",
+            "\\bottomrule\\end{tabular}\\end{center}"]
 (root / "docs" / "math" / "chapters" / "09_experiments_table.tex").write_text("\n".join(out) + "\n")
 print("wrote 09_experiments_table.tex")

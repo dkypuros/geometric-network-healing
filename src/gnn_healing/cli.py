@@ -16,13 +16,14 @@ from .gnn.detect import degradation_estimate
 from .intent import propose_branches, select_order, to_tmf921_intent
 from .orchestration import decompose_to_service_orders, MockOrchestrator, closed_loop, healing_cycles
 from .evaluation import lead_time, hit_at_k, triage_reduction, summarize
+from .gnn.edge import site_partition, edge_calibrate, edge_detect_and_rank
 
 
 def run_pipeline(a) -> dict:
     t_start = time.time()
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     print("backend:", json.dumps(describe_backend()))
-    twin = generate_twin(seed=a.seed)
+    twin = generate_twin(seed=a.seed, edge=a.edge)
     base = twin.to_pyg()
     print(f"twin: {twin.n} nodes, {len(twin.edges)} directed edges, "
           f"{int(base.edge_index.shape[1])} message-passing edges incl. transposes")
@@ -44,6 +45,11 @@ def run_pipeline(a) -> dict:
     z_node = calibrate_zscore(cal_nominal)
     print(f"calibrated on {len(cal_nominal)} nominal episodes: GNN theta = {theta:.3f}, "
           f"service z = {z_service:.2f}, per-node z = {z_node:.2f} (same margin, zero false alarms on calibration)")
+    parts, theta_edge = None, None
+    if a.edge:
+        parts = site_partition(twin, base)
+        theta_edge = edge_calibrate(model, cal_nominal, parts, cfg.window)
+        print(f"edge partition: {len(parts)} sites, subgraph sizes {[len(p['nodes']) for p in parts.values()]}, theta_edge = {theta_edge:.3f}")
 
     keys = ("threshold", "zscore", "service", "zscore3", "service3", "gnn")
     rows, false_alarms, nominal_count = [], dict.fromkeys(keys, 0), 0
@@ -77,7 +83,17 @@ def run_pipeline(a) -> dict:
         t_warroom = min((t_thr if t_thr is not None else ep.T - 1) + a.rca_delay, ep.T - 1)
         n_deg = len(degraded_set(ep, t_warroom))        # nodes a war room would face at alarm time
         # business layer + closed loop
-        branches = propose_branches(twin, ranking, d_hat, k=3)
+        edge_row = {}
+        if parts is not None:
+            t_ge, ranking_e, uplink = edge_detect_and_rank(model, ep, parts, cfg.window, theta_edge, start=ep.onset, rca_delay=a.rca_delay)
+            edge_row = {"t_gnn_edge": t_ge, "delay_gnn_edge": (t_ge - ep.onset) if t_ge is not None else None,
+                        "detected_gnn_edge": t_ge is not None,
+                        "hit@1_edge": hit_at_k(ranking_e, ep.origin, 1), "hit@3_edge": hit_at_k(ranking_e, ep.origin, 3),
+                        "edge_agrees_top1": float(ranking_e[0] == ranking[0]),
+                        "uplink_scalars_per_site_step": uplink,
+                        "kpi_scalars_per_site_step": float(np.mean([len(p["owned"]) for p in parts.values()])) * ep.X.shape[2],
+                        "origin_site": int(twin.nodes.loc[ep.origin, "site"])}
+        branches = propose_branches(twin, ranking, d_hat, k=3, ssc_mode=a.ssc_mode)
         chosen = select_order(branches, budget=a.budget)
         intent = to_tmf921_intent(chosen, intent_id=f"healing-{i}")
         orders = decompose_to_service_orders(intent)
@@ -106,6 +122,7 @@ def run_pipeline(a) -> dict:
             "exposure_gnn_loop": gnn_loop["revenue_weighted_exposure"],
             "exposure_threshold_loop": thr_loop["revenue_weighted_exposure"],
             "top_branch_domain": chosen[0].domain if chosen else None,
+            **edge_row,
         })
 
     summ = summarize(rows)
@@ -131,6 +148,11 @@ def run_pipeline(a) -> dict:
     (out / "episodes.json").write_text(json.dumps(rows, indent=1, default=float))
     torch.save(model.state_dict(), out / "model.pt")
     report["detection_rate"]["zscore"] = float(np.mean([x["lead_vs_zscore"] is not None for x in rows]))
+    if parts is not None:
+        report["edge"] = {"sites": len(parts), "detection_rate_edge": float(np.mean([x["detected_gnn_edge"] for x in rows])),
+                          "regional_faults": int(sum(x["origin_site"] < 0 for x in rows)),
+                          "hit@1_edge_on_site_faults": float(np.mean([x["hit@1_edge"] for x in rows if x["origin_site"] >= 0] or [0])),
+                          "hit@1_edge_on_regional_faults": float(np.mean([x["hit@1_edge"] for x in rows if x["origin_site"] < 0] or [0]))}
     _write_markdown(report, out / "results.md", rows)
     print(open(out / "results.md").read())
     print("sample intent:", json.dumps(sample_intent["intent"], indent=1) if sample_intent else None)
@@ -163,6 +185,15 @@ def _write_markdown(r: dict, path: Path, rows_f: list[dict] | None = None) -> No
          f"| triage reduction @3 (share of the war-room set a top-3 RCA list skips) | {m.get('triage_reduction@3', 0):.2f} |",
          f"| revenue-weighted exposure, GNN-timed healing | {m.get('exposure_gnn_loop', 0):.1f} |",
          f"| revenue-weighted exposure, threshold-timed healing | {m.get('exposure_threshold_loop', 0):.1f} |",
+         *(["", "## Edge-partitioned inference (AI grid)", "",
+            "| metric | full graph | per-site + regional merge |", "|---|---|---|",
+            f"| detection rate | {r['detection_rate']['gnn']:.2f} | {r['edge']['detection_rate_edge']:.2f} |",
+            f"| mean detection delay after onset (steps) | {m.get('delay_gnn', float('nan')):.1f} | {m.get('delay_gnn_edge', float('nan')):.1f} |",
+            f"| root cause hit@1 / hit@3 | {m.get('hit@1', 0):.2f} / {m.get('hit@3', 0):.2f} | {m.get('hit@1_edge', 0):.2f} / {m.get('hit@3_edge', 0):.2f} |",
+            f"| hit@1 on site-local faults / on regional faults ({r['edge']['regional_faults']} regional) | - | {r['edge']['hit@1_edge_on_site_faults']:.2f} / {r['edge']['hit@1_edge_on_regional_faults']:.2f} |",
+            f"| edge top-1 agrees with full-graph top-1 | - | {m.get('edge_agrees_top1', 0):.2f} |",
+            f"| scalars leaving a site per step (KPIs vs uplinked summary) | {m.get('kpi_scalars_per_site_step', 0):.0f} | {m.get('uplink_scalars_per_site_step', 0):.0f} |",
+            ] if "edge" in r else []),
          "", "## By fault type", "", "| fault | n | delay GNN | delay thr | delay service z=3 | hit@1 | hit@3 |", "|---|---|---|---|---|---|---|"]
     for k, v in r["by_fault"].items():
         g = lambda kk, d=1: "-" if v.get(kk) is None else f"{v[kk]:.{d}f}"
@@ -184,10 +215,13 @@ def main(argv=None):
     q.add_argument("--budget", type=int, default=6)
     q.add_argument("--seed", type=int, default=0)
     q.add_argument("--out", default="results")
+    q.add_argument("--edge", action="store_true", help="edge twin (PSA/LADN per site) + per-site inference comparison")
+    q.add_argument("--ssc-mode", type=int, default=3, choices=[1, 2, 3], help="SSC mode of sessions at edge PSAs (relocation cost)")
     q.set_defaults(fn=run_pipeline)
     t = sub.add_parser("twin", help="print the synthetic twin summary")
     t.add_argument("--seed", type=int, default=0)
-    t.set_defaults(fn=lambda a: print(generate_twin(seed=a.seed).nodes.groupby(["domain", "type"]).size()))
+    t.add_argument("--edge", action="store_true")
+    t.set_defaults(fn=lambda a: print(generate_twin(seed=a.seed, edge=a.edge).nodes.groupby(["domain", "type"]).size()))
     b = sub.add_parser("backend", help="show detected hardware / libraries")
     b.set_defaults(fn=lambda a: print(json.dumps(describe_backend(), indent=2)))
     a = p.parse_args(argv)

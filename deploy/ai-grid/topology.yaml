@@ -1,0 +1,28 @@
+# Illustrative AI-grid deployment shape for gnn-healing (branch edge-ai-grid).
+# This describes roles and data flows; it is NOT a tested Dynamo / Triton configuration.
+roles:
+  edge_site:                      # one per aggregation site (cell site / edge POP)
+    gpu: shared with AI-RAN (Aerial) on the same accelerator
+    gnn:
+      model: HealingGNN (window=8, hidden=64, layers=3)
+      serving: Triton Inference Server or TensorRT engine
+      input: site subgraph = owned nodes + 1-hop boundary, KPI windows local only
+      output_uplink_per_step: [max_degradation, top3_rca_node_ids, top3_rca_logits]
+    agent_decode:                 # Dynamo decode worker for the site's LLM agents
+      backend: vLLM via Dynamo worker, role=decode
+  metro_hub:
+    gnn_regional:
+      model: same HealingGNN, full twin graph
+      role: merge site summaries; localise regional-origin faults (core routers, I-UPF, AMF, SMF)
+    intent_layer:
+      role: BIEM selection across sites under budget B; TMF921-shaped intent; TMF641-shaped orders
+    agent_prefill:                # Dynamo prefill worker: long shared context
+      backend: vLLM via Dynamo worker, role=prefill
+      context: topology description, intent vocabulary, standards payload templates
+    dynamo_router:
+      mode: kv-aware              # route an incident to the worker warm for that site's context
+      api: OpenAI-compatible
+flows:
+  - edge_site.gnn -> metro_hub.gnn_regional : site summaries only (7 scalars / step / site)
+  - metro_hub.intent_layer -> orchestrator  : TMF641-shaped service orders, per domain
+  - metro_hub.agent_prefill <-> edge_site.agent_decode : KV cache via NIXL over the grid fabric

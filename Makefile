@@ -12,6 +12,9 @@ test:
 pipeline:         ## end-to-end: twin -> simulate -> baselines -> GNN -> intent -> closed loop
 	uv run gnn-healing pipeline --episodes 120 --epochs 30 --out results
 
+pipeline-edge:    ## edge twin (PSA/LADN per site) with per-site vs full-graph inference comparison
+	uv run gnn-healing pipeline --edge --episodes 160 --epochs 30 --out results
+
 pdf:              ## render results into the monograph and README, then compile
 	python3 scripts/results_to_tex.py && python3 scripts/results_to_readme.py
 	cd docs/math && latexmk -pdf -interaction=nonstopmode main.tex > /dev/null && cp main.pdf geometric-network-healing.pdf

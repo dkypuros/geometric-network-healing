@@ -73,6 +73,21 @@ Twin: 74 nodes, 130 edges. Fault episodes: 32, nominal: 8. Runtime 643.8 s.
 *(CPU, fixed seed; regenerate with `make pipeline`.)*
 <!-- RESULTS:END -->
 
+## Branch `edge-ai-grid`: LADN, PDU session anchors, and the NVIDIA AI grid
+
+This branch extends the twin with 3GPP edge structure and measures per-site inference:
+
+- a **PDU Session Anchor UPF** (`psa`) and a **Local Area Data Network** (`ladn`) per site behind a
+  regional I-UPF, with their own faults (`psa_overload`, `ladn_dn_degrade`) and revenue;
+- **SSC mode** as the cost of the "relocate anchor to backup PSA" remediation (`--ssc-mode 1|2|3`);
+- **per-site inference**: the same model on each site's subgraph, only 7 scalars per step uplinked,
+  compared against full-graph inference on the same episodes (`make pipeline-edge`);
+- where the serving stack goes on an AI grid: Triton/TensorRT for the GNN at the site, **NVIDIA
+  Dynamo** for the LLM agents around it (disaggregated prefill/decode, KV-aware routing).
+
+See [docs/edge-ai-grid.md](docs/edge-ai-grid.md), `deploy/ai-grid/topology.yaml`, and Chapter 12
+of the monograph.
+
 ## Reproduce
 
 ```bash

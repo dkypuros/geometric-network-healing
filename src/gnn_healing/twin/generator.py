@@ -65,6 +65,17 @@ class Twin:
             num_nodes=self.n,
         )
 
+    @property
+    def sites(self) -> list[int]:
+        return sorted(int(x) for x in self.nodes["site"].unique() if x >= 0)
+
+    def backup_psa(self, psa: int) -> int | None:
+        """Backup anchor for SSC-mode-3 relocation: the PSA at the next site."""
+        psas = self.nodes.index[self.nodes["type"] == "psa"].tolist()
+        if psa not in psas or len(psas) < 2:
+            return None
+        return psas[(psas.index(psa) + 1) % len(psas)]
+
     def downstream(self, v: int) -> set[int]:
         """Forward reach of v along cause->effect edges (blast radius, Eq. 7.2)."""
         return nx.descendants(self.graph, v)
@@ -72,16 +83,19 @@ class Twin:
 
 def generate_twin(n_core: int = 2, n_agg: int = 6, gnb_per_agg: int = 2,
                   cells_per_gnb: int = 3, n_upf: int = 2, n_services: int = 6,
-                  seed: int = 0) -> Twin:
+                  seed: int = 0, edge: bool = False) -> Twin:
+    """edge=True adds, per aggregation site, an edge-hosted PDU Session Anchor UPF (PSA) and a
+    Local Area Data Network (LADN) with its own service, behind one regional intermediate UPF.
+    Every node gets a `site` index (-1 = regional), used by the edge-partitioned inference."""
     rng = np.random.default_rng(seed)
     G = nx.DiGraph()
     rows: list[dict] = []
     erows: list[dict] = []
 
-    def add(t: NodeType, revenue: float = 0.0, profile: str = "n/a") -> int:
+    def add(t: NodeType, revenue: float = 0.0, profile: str = "n/a", site: int = -1) -> int:
         i = len(rows)
         rows.append({"id": i, "type": t.value, "revenue": float(revenue), "profile": profile,
-                     "profile_weight": PROFILES.get(profile, 1.0)})
+                     "profile_weight": PROFILES.get(profile, 1.0), "site": site})
         G.add_node(i, type=t.value)
         return i
 
@@ -109,17 +123,20 @@ def generate_twin(n_core: int = 2, n_agg: int = 6, gnb_per_agg: int = 2,
         link(l, core[i], Relation.LINK_FEEDS_ROUTER)
 
     cells: list[int] = []
-    for a in agg:
+    site_cells: dict[int, list[int]] = {}
+    for si, a in enumerate(agg):
+        rows[a]["site"] = si
+        site_cells[si] = []
         for _ in range(gnb_per_agg):
-            g = add(NodeType.GNB)
+            g = add(NodeType.GNB, site=si)
             link(a, g, Relation.AGG_BACKHAULS_GNB)
             link(amf, g, Relation.AMF_CONTROLS_GNB)
             for _ in range(cells_per_gnb):
                 # revenue density: heavy-tailed, so a few cells carry most revenue (Eq. 7.1)
                 profile = str(rng.choice(list(PROFILES), p=[0.08, 0.12, 0.15, 0.65]))
-                c = add(NodeType.CELL, revenue=float(rng.lognormal(mean=0.0, sigma=1.0)), profile=profile)
+                c = add(NodeType.CELL, revenue=float(rng.lognormal(mean=0.0, sigma=1.0)), profile=profile, site=si)
                 link(g, c, Relation.GNB_SERVES_CELL)
-                cells.append(c)
+                cells.append(c); site_cells[si].append(c)
 
     services = []
     for _ in range(n_services):
@@ -133,6 +150,28 @@ def generate_twin(n_core: int = 2, n_agg: int = 6, gnb_per_agg: int = 2,
         for c in rng.choice(cells, size=max(1, len(cells) // (2 * n_services)), replace=False):
             if not G.has_edge(int(c), s):
                 link(int(c), s, Relation.CELL_CARRIES_SERVICE)
+
+    if edge:
+        # one regional I-UPF; per site a co-located PSA, a LADN and an edge service.
+        iupf = add(NodeType.IUPF)
+        link(core[0], iupf, Relation.CORE_FEEDS_IUPF)
+        link(smf, iupf, Relation.SMF_CONTROLS_IUPF)
+        for si, a in enumerate(agg):
+            psa = add(NodeType.PSA, site=si)
+            link(iupf, psa, Relation.IUPF_FORWARDS_PSA)
+            link(a, psa, Relation.AGG_FEEDS_PSA)
+            link(smf, psa, Relation.SMF_CONTROLS_PSA)
+            profile = str(rng.choice(["enterprise_critical", "mass_event_venue", "transit_hub", "residential"], p=[0.4, 0.2, 0.2, 0.2]))
+            ladn = add(NodeType.LADN, revenue=float(rng.lognormal(mean=1.0, sigma=0.6)), profile=profile, site=si)
+            link(psa, ladn, Relation.PSA_ANCHORS_LADN)
+            for c in site_cells[si]:
+                link(c, ladn, Relation.CELL_IN_LADN_AREA)
+            es = add(NodeType.SERVICE, site=si)
+            link(ladn, es, Relation.LADN_SERVES)
+        # transport links serving an agg site belong to that site
+        for e in erows:
+            if e["rel"] == Relation.LINK_FEEDS_ROUTER.value and rows[e["dst"]]["site"] >= 0:
+                rows[e["src"]]["site"] = rows[e["dst"]]["site"]
 
     from .schema import DOMAIN_OF
     nodes = pd.DataFrame(rows)

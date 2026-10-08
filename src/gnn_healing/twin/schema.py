@@ -18,6 +18,11 @@ class NodeType(str, Enum):
     AMF = "amf"          # Core (control plane)
     SMF = "smf"          # Core (control plane)
     SERVICE = "service"  # Service layer (the trigger surface; no alarm needed)
+    # edge extension (3GPP TS 23.501): intermediate UPF, PDU session anchor UPF at the edge site,
+    # Local Area Data Network reachable only through that site's PSA
+    IUPF = "iupf"        # Core (regional user plane, N3/N9)
+    PSA = "psa"          # Core, edge-hosted PDU Session Anchor UPF (N9 in, N6 out)
+    LADN = "ladn"        # Edge data network (enterprise / venue / MEC application)
 
 
 DOMAIN_OF = {
@@ -25,6 +30,7 @@ DOMAIN_OF = {
     NodeType.ROUTER: "Transport", NodeType.LINK: "Transport",
     NodeType.UPF: "Core", NodeType.AMF: "Core", NodeType.SMF: "Core",
     NodeType.SERVICE: "Service",
+    NodeType.IUPF: "Core", NodeType.PSA: "Edge", NodeType.LADN: "Edge",
 }
 
 
@@ -39,6 +45,15 @@ class Relation(str, Enum):
     CORE_FEEDS_UPF = "router(core)->upf"
     UPF_TERMINATES_SERVICE = "upf->service"
     CELL_CARRIES_SERVICE = "cell->service"
+    # edge extension
+    CORE_FEEDS_IUPF = "router(core)->iupf"
+    SMF_CONTROLS_IUPF = "smf->iupf"
+    IUPF_FORWARDS_PSA = "iupf->psa"          # N9
+    AGG_FEEDS_PSA = "router(agg)->psa"       # site transport feeds the co-located PSA
+    SMF_CONTROLS_PSA = "smf->psa"
+    PSA_ANCHORS_LADN = "psa->ladn"           # N6 into the local DN
+    CELL_IN_LADN_AREA = "cell->ladn"         # LADN service area (TA list) membership
+    LADN_SERVES = "ladn->service"
 
 
 RELATIONS: list[Relation] = list(Relation)
@@ -59,4 +74,7 @@ EFFECT = {
     NodeType.AMF:     [ 0.0, 1.0, 0.3, 0.9],
     NodeType.SMF:     [ 0.0, 0.9, 0.2, 0.8],
     NodeType.SERVICE: [-1.0, 0.8, 0.7, 0.0],
+    NodeType.IUPF:    [-0.5, 0.8, 0.5, 1.0],
+    NodeType.PSA:     [-0.7, 0.9, 0.5, 1.0],
+    NodeType.LADN:    [-1.0, 0.9, 0.6, 0.3],
 }

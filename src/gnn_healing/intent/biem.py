@@ -16,11 +16,17 @@ from ..twin.schema import NodeType, DOMAIN_OF
 
 # resource units and cost per remediation target type (business-layer vocabulary)
 RESOURCE = {NodeType.CELL: 1, NodeType.GNB: 2, NodeType.ROUTER: 3, NodeType.LINK: 3,
-            NodeType.UPF: 4, NodeType.AMF: 5, NodeType.SMF: 4, NodeType.SERVICE: 1}
+            NodeType.UPF: 4, NodeType.AMF: 5, NodeType.SMF: 4, NodeType.SERVICE: 1,
+            NodeType.IUPF: 4, NodeType.PSA: 2, NodeType.LADN: 2}
+# SSC mode of the sessions anchored at an edge PSA decides how cheap a relocation is:
+# mode 3 = make-before-break (new anchor first), mode 2 = break-before-make, mode 1 = no relocation.
+SSC_MODE_RESOURCE = {3: 2, 2: 3, 1: 5}
 ACTION = {NodeType.CELL: "cell_reset_and_reparameterize", NodeType.GNB: "gnb_restart_and_reparent",
           NodeType.ROUTER: "reroute_traffic_and_reload", NodeType.LINK: "switch_to_protection_path",
           NodeType.UPF: "scale_out_and_steer_sessions", NodeType.AMF: "throttle_and_scale_signaling",
-          NodeType.SMF: "scale_control_plane", NodeType.SERVICE: "no_op"}
+          NodeType.SMF: "scale_control_plane", NodeType.SERVICE: "no_op",
+          NodeType.IUPF: "iupf_reselect_n9_path", NodeType.PSA: "psa_relocate_ssc_mode3_to_backup",
+          NodeType.LADN: "ladn_fallback_to_regional_dn"}
 
 
 @dataclass
@@ -33,9 +39,12 @@ class RemediationBranch:
     revenue_at_risk: float
     resource_units: int
     priority_score: float
+    site: int = -1
+    detail: str = ""
 
 
-def propose_branches(twin: Twin, ranking: list[int], d_hat: np.ndarray, k: int = 3) -> list[RemediationBranch]:
+def propose_branches(twin: Twin, ranking: list[int], d_hat: np.ndarray, k: int = 3,
+                     ssc_mode: int = 3) -> list[RemediationBranch]:
     out = []
     rev = (twin.nodes["revenue"] * twin.nodes["profile_weight"]).to_numpy()
     for rank, v in enumerate(ranking[:k]):
@@ -43,10 +52,16 @@ def propose_branches(twin: Twin, ranking: list[int], d_hat: np.ndarray, k: int =
         reach = twin.downstream(v) | {v}
         idx = np.fromiter(reach, dtype=int)
         r = float(np.sum(rev[idx] * np.clip(d_hat[idx], 0, None)))
-        res = RESOURCE[t]
+        res, action, detail = RESOURCE[t], ACTION[t], ""
+        if t == NodeType.PSA:
+            res = SSC_MODE_RESOURCE[ssc_mode]
+            b = twin.backup_psa(int(v))
+            action = f"psa_relocate_ssc_mode{ssc_mode}_to_backup"
+            detail = f"re-anchor sessions to psa node:{b} (next site)" if b is not None else "no backup PSA"
+        site = int(twin.nodes.loc[v, "site"]) if "site" in twin.nodes else -1
         out.append(RemediationBranch(target=int(v), target_type=t.value, domain=DOMAIN_OF[t],
-                                     action=ACTION[t], rca_rank=rank, revenue_at_risk=r,
-                                     resource_units=res, priority_score=r / res))
+                                     action=action, rca_rank=rank, revenue_at_risk=r,
+                                     resource_units=res, priority_score=r / res, site=site, detail=detail))
     return out
 
 
@@ -72,7 +87,8 @@ def to_tmf921_intent(branches: list[RemediationBranch], intent_id: str = "healin
             "@type": "IntentExpression",
             "targets": [{"target": f"node:{b.target}", "domain": b.domain, "action": b.action,
                          "priority": i + 1, "revenueAtRisk": round(b.revenue_at_risk, 3),
-                         "resourceUnits": b.resource_units} for i, b in enumerate(branches)],
+                         "resourceUnits": b.resource_units, "site": b.site, "detail": b.detail}
+                        for i, b in enumerate(branches)],
             "expectation": "restore service KPIs to nominal in revenue-priority order",
         },
         "extensions": {"BIEM": {"ordering": "revenue_at_risk/resource_units", "budget_applied": True}},

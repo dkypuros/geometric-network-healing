@@ -1,0 +1,110 @@
+\chapter{The edge: LADN, session anchors, and the AI grid}
+\label{ch:edge}
+
+Everything so far treats the twin as one graph evaluated in one place. Operators do not run one
+place. Radio sites, aggregation points and metro hubs are where the KPIs are produced, and
+NVIDIA's AI-grid programme puts accelerated compute at exactly those points, shared with the
+AI-RAN baseband. This chapter adds the edge to the twin as structure, not as deployment detail,
+and measures what evaluating the model \emph{per site} costs.
+
+\section{Two 3GPP constructs as graph structure}
+A PDU session is anchored at a UPF, the \emph{PDU Session Anchor} (PSA), which terminates N6
+toward a data network. For edge traffic the PSA sits at the site behind an intermediate UPF
+(I-UPF) on N9. A \emph{Local Area Data Network} (LADN) is a data network reachable only inside a
+service area, a list of tracking areas, and is the normal home of enterprise, venue and MEC
+applications. Both become node types, with relations oriented as before in the direction a fault
+propagates:
+\begin{equation}
+\Tset_{\text{edge}}=\Tset\cup\{\textsf{iupf},\textsf{psa},\textsf{ladn}\},\qquad
+\Rel_{\text{edge}}=\Rel\cup\{\textsf{core}\!\to\!\textsf{iupf},\ \textsf{iupf}\!\to\!\textsf{psa},\ \textsf{agg}\!\to\!\textsf{psa},\ \textsf{smf}\!\to\!\textsf{psa},\ \textsf{psa}\!\to\!\textsf{ladn},\ \textsf{cell}\!\to\!\textsf{ladn},\ \textsf{ladn}\!\to\!\textsf{service}\}.
+\label{eq:edge-domain}
+\end{equation}
+Every node also carries a site index $\sigma(v)\in\{-1,0,\dots,S-1\}$, with $-1$ for regional
+nodes (core routers and their links, I-UPF, AMF, SMF, central UPFs and their services). A PSA's
+blast radius is, by construction, confined to its own site plus regional nodes: the structure
+says where a session-anchor fault can and cannot be felt, and the business layer inherits that.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1cm, y=1cm, >=Latex,
+  n/.style={draw, rounded corners=2pt, minimum width=17mm, minimum height=6.5mm, font=\small, thick, fill=white},
+  ran/.style={n, draw=ran, fill=ran!8}, tra/.style={n, draw=tra, fill=tra!8},
+  core/.style={n, draw=core, fill=core!10}, svc/.style={n, draw=svc, fill=svc!8},
+  edge/.style={n, draw=black!70, fill=black!6},
+  e/.style={->, thick, draw=ink!70}, lab/.style={font=\scriptsize, fill=white, inner sep=1pt}
+]
+\node[tra]  (rc)   at (0, 3)     {router (core)};
+\node[core] (iupf) at (3.5, 3)   {iupf};
+\node[core] (smf)  at (10.5, 3)  {smf};
+\node[tra]  (ra)   at (0, 1)     {router (agg)};
+\node[edge] (psa)  at (3.5, 1)   {psa (site $s$)};
+\node[ran]  (gnb)  at (0, -1)    {gnb};
+\node[ran]  (cell) at (0, -3)    {cell};
+\node[edge] (ladn) at (3.5, -1)  {ladn (site $s$)};
+\node[svc]  (es)   at (7, -1)    {edge service};
+\node[edge, dashed] (psab) at (10.5, 1) {psa (site $s{+}1$)};
+\draw[e] (rc) -- (iupf) node[lab, midway, above] {feeds};
+\draw[e] (iupf) -- (psa) node[lab, midway, left] {N9};
+\draw[e] (smf.south) -- ++(0,-0.55) -- ++(-6.1,0) node[lab, pos=0.8, above] {controls} -- (psa.north east);
+\draw[e] (rc) -- (ra) node[lab, midway, right] {feeds};
+\draw[e] (ra) -- (psa) node[lab, midway, above] {feeds};
+\draw[e] (ra) -- (gnb) node[lab, midway, right] {backhauls};
+\draw[e] (gnb) -- (cell) node[lab, midway, right] {serves};
+\draw[e] (psa) -- (ladn) node[lab, midway, right] {N6};
+\draw[e] (cell) -- ++(1.6,0) -- (ladn.south west) node[lab, pos=0.3, below] {in service area};
+\draw[e] (ladn) -- (es) node[lab, midway, above] {serves};
+\draw[->, thick, dashed, draw=core!80!black] (psa.east) -- ++(0.4,0) -- ++(0,0.5) -- ++(5.2,0) node[lab, pos=0.45, above] {relocate sessions (SSC mode 3)} -- (psab.north west);
+\begin{scope}[on background layer]
+\node[draw=black!40, dashed, rounded corners=6pt, fit=(ra)(psa)(gnb)(cell)(ladn)(es), inner sep=7pt,
+      label={[font=\scriptsize, text=black!55]below:site $s$: owned nodes; regional nodes above are its one-hop boundary}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{One edge site in the extended twin \eqref{eq:edge-domain}. The PSA and LADN are owned by
+the site; the core router, I-UPF and SMF are regional and appear in the site's subgraph only as
+boundary context. The dashed relocation is a remediation action, not a propagation edge.}
+\end{figure}
+
+\section{Session continuity as remediation cost}
+The remediation for a degraded anchor is to re-anchor its sessions at a backup PSA, here the next
+site's. How expensive that is depends on the Session and Service Continuity mode of the sessions:
+mode~3 establishes the new anchor before releasing the old (make-before-break), mode~2 releases
+first, mode~1 does not relocate at all. The business layer of Chapter~\ref{ch:intent} already has
+the right slot: the resource cost $c(v)$ in \eqref{eq:selection} becomes mode-dependent,
+\begin{equation}
+c(\textsf{psa})=c_{\mathrm{SSC}}(m),\qquad c_{\mathrm{SSC}}(3)<c_{\mathrm{SSC}}(2)<c_{\mathrm{SSC}}(1),
+\label{eq:ssc}
+\end{equation}
+so the same anchor fault at a mode-3 site is sequenced ahead of the same fault at a mode-1 site
+when revenue at risk is equal. Same fault, different response, now on a 3GPP axis.
+
+\section{Per-site inference as a graph cut}
+Let $V_s=\{v:\sigma(v)=s\}$ be the nodes a site owns and $B_s$ its one-hop boundary in either
+direction of $\Rel'$. The site evaluates the \emph{same} network of Chapter~\ref{ch:symmetry} on
+the induced subgraph $G[V_s\cup B_s]$ and reports a summary,
+\begin{equation}
+a_s(t)=\max_{v\in V_s}\hat d_v(t),\qquad
+Z_s(t)=\text{top-}k\big\{(v,z_v(t)):\ v\in V_s\cup B_s\big\},
+\label{eq:site-summary}
+\end{equation}
+and the regional merge is $a(t)=\max_s a_s(t)$ with the ranking taken over the union of the
+$Z_s(t)$, each node scored by the best site that saw it. Per step a site uplinks $1+2k$ scalars
+instead of $|V_s|\cdot K$ KPI values; the KPI windows never leave the site.
+
+What is lost is exact: a node's $L$-hop receptive field is truncated at the cut. For a site-owned
+origin the cut removes only distant context, and the experiment shows no loss. For a regional
+origin, a core router or the I-UPF, no site owns the node and each site sees only its symptoms;
+the per-site ranking then names the site's boundary copy of the regional node, or a symptomatic
+owned node. That is the partition's cost, and it is the reason the design keeps a full-graph pass
+at the metro hub for regional-origin faults. The table in Chapter~\ref{ch:experiments} on this
+branch reports hit@1 separately for site-local and regional origins.
+
+\section{Where the serving stack goes}
+The GNN is small and latency-bound, not throughput-bound: it belongs under a standard inference
+server at the site, on the GPU the AI-RAN baseband already occupies. NVIDIA Dynamo is the wrong
+tool for the GNN and the right tool for the reasoning agents around it. The industry design wraps
+the five stages in LLM agents; on an AI grid those agents are an OpenAI-compatible service whose
+long shared context (topology, intent vocabulary, standards payload templates) is prefilled once
+at the hub and whose per-incident decoding runs on the smaller site GPUs, with Dynamo's KV-aware
+router keeping each site's agent warm for its own topology and NIXL moving KV state across the
+grid fabric. \code{docs/edge-ai-grid.md} and \code{deploy/ai-grid/} describe the shape; neither
+is exercised in this repository, and we say so.

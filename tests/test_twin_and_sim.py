@@ -10,7 +10,8 @@ def test_twin_is_dag_like_and_typed():
     assert set(tw.edges["rel"]) <= {r.value for r in RELATIONS}
     d = tw.to_pyg()
     assert d.edge_index.shape[1] == 2 * len(tw.edges)      # transposes appended
-    assert int(d.edge_type.max()) == 2 * len(RELATIONS) - 1
+    assert int(d.edge_type.max()) <= 2 * len(RELATIONS) - 1
+    assert int(generate_twin(seed=1, edge=True).to_pyg().edge_type.max()) == 2 * len(RELATIONS) - 1
 
 
 def test_permutation_equivariance_of_simulator_labels():

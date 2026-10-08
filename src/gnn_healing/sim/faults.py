@@ -17,6 +17,8 @@ class FaultType(str, Enum):
     UPF_OVERLOAD = "upf_overload"
     SLEEPING_CELL = "sleeping_cell"
     AMF_SIGNALING_STORM = "amf_signaling_storm"
+    PSA_OVERLOAD = "psa_overload"            # edge anchor saturates: LADN sessions degrade silently
+    LADN_DN_DEGRADE = "ladn_dn_degrade"      # the local DN / MEC application itself degrades
 
 
 # origin type, severity range (per-step injection; steady state at origin = s/(1-rho)), ramp range (steps)
@@ -26,6 +28,8 @@ FAULT_CATALOG = {
     FaultType.UPF_OVERLOAD:        (NodeType.UPF,    (0.35, 0.60), (20, 45)),
     FaultType.SLEEPING_CELL:       (NodeType.CELL,   (0.40, 0.65), (10, 30)),
     FaultType.AMF_SIGNALING_STORM: (NodeType.AMF,    (0.30, 0.50), (25, 60)),
+    FaultType.PSA_OVERLOAD:        (NodeType.PSA,    (0.35, 0.60), (15, 40)),
+    FaultType.LADN_DN_DEGRADE:     (NodeType.LADN,   (0.40, 0.65), (10, 35)),
 }
 
 
@@ -45,7 +49,10 @@ class Fault:
 
 
 def sample_fault(nodes, T: int, rng: np.random.Generator, kind: FaultType | None = None) -> Fault:
-    kind = kind or FaultType(rng.choice([k.value for k in FaultType]))
+    if kind is None:
+        present = set(nodes["type"])
+        kinds = [k for k in FaultType if FAULT_CATALOG[k][0].value in present]
+        kind = FaultType(rng.choice([k.value for k in kinds]))
     ntype, (s_lo, s_hi), (r_lo, r_hi) = FAULT_CATALOG[kind]
     candidates = nodes.index[nodes["type"] == ntype.value].to_numpy()
     origin = int(rng.choice(candidates))
