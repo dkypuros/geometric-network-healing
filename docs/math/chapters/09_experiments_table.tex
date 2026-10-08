@@ -1,0 +1,27 @@
+\begin{center}\small\begin{tabular}{@{}p{9.2cm}r@{}}\toprule Metric & Value \\ \midrule
+Fault episodes / nominal episodes & 32 / 8 \\
+Detection rate: GNN / static threshold & 1.00 / 1.00 \\
+Detection rate: service $z$ (calibrated $z=4.1$ / textbook $z=3$) & 0.00 / 0.31 \\
+Detection rate: per-node $z$ (calibrated $z=8.0$ / textbook $z=3$) & 0.00 / 1.00 \\
+False alarms on nominal: GNN / thr. / service $z$ cal. / service $z{=}3$ / node $z$ cal. / node $z{=}3$ & 0 / 0 / 0 / 4 / 0 / 8 \\
+Pre-onset false alarms on fault episodes, same order & 0 / 0 / 0 / 3 / 0 / 30 \\
+Detection delay after onset (steps): GNN / static threshold & 22.9 / 32.6 \\
+Detection delay (steps): service $z$ cal. / $z{=}3$; node $z$ cal. / $z{=}3$ & -- / 56.2; -- / 9.6 \\
+Lead time of GNN vs static threshold (steps, where it fired) & 9.8 \\
+Lead time of GNN vs service $z$ (calibrated / $z{=}3$) & -- / 32.0 \\
+Lead time of GNN vs per-node $z$ (calibrated / $z{=}3$) & -- / -13.3 \\
+Root cause hit@1 / hit@3 & 1.00 / 1.00 \\
+Healed within 3 verify-and-re-trigger cycles / mean cycles & 1.00 / 1.00 \\
+War-room set at alarm time (nodes) / triage reduction@3 & 13.9 / 0.35 \\
+Revenue-weighted exposure: GNN-timed / threshold-timed healing & 328.3 / 573.1 \\
+\bottomrule\end{tabular}\end{center}
+
+\begin{center}\small\begin{tabular}{@{}lrrrrrr@{}}\toprule
+Fault type & $n$ & delay GNN & delay thr. & delay service $z{=}3$ & hit@1 & hit@3 \\ \midrule
+amf signaling storm & 7 & 27.9 & 45.0 & 46.5 & 1.00 & 1.00 \\
+fiber degrade & 7 & 22.7 & 28.6 & 112.0 & 1.00 & 1.00 \\
+router congestion & 7 & 22.3 & 32.3 & 6.0 & 1.00 & 1.00 \\
+sleeping cell & 8 & 18.5 & 25.4 & 100.0 & 1.00 & 1.00 \\
+upf overload & 3 & 24.7 & 33.3 & 65.0 & 1.00 & 1.00 \\
+\bottomrule\end{tabular}\end{center}
+\noindent\textit{Twin: 74 nodes, 130 edges. Detection threshold $\theta=1.139$. Config: episodes=160, epochs=30, T=160, window=8, seed=0. Runtime 643.8\,s on CPU.}

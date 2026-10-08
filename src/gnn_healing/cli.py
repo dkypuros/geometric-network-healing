@@ -29,10 +29,11 @@ def run_pipeline(a) -> dict:
     print(twin.nodes["type"].value_counts().to_dict())
 
     eps = make_episodes(twin, a.episodes, T=a.T, seed=a.seed)
-    n_train = int(0.6 * len(eps)); n_cal = int(0.15 * len(eps))
-    train_eps, cal_eps, test_eps = eps[:n_train], eps[n_train:n_train + n_cal], eps[n_train + n_cal:]
-    cal_nominal = [e for e in cal_eps if e.fault is None] or [e for e in train_eps if e.fault is None][:4]
-    print(f"episodes: train {len(train_eps)}  calibration {len(cal_eps)} (nominal {len(cal_nominal)})  test {len(test_eps)}")
+    n_train = int(0.75 * len(eps))
+    train_eps, test_eps = eps[:n_train], eps[n_train:]
+    # dedicated nominal calibration episodes (own seed): the "clean history" every detector is calibrated on
+    cal_nominal = make_episodes(twin, a.calibration_episodes, T=a.T, nominal_fraction=1.0, seed=a.seed + 10_000)
+    print(f"episodes: train {len(train_eps)}  test {len(test_eps)}  nominal calibration {len(cal_nominal)}")
 
     cfg = TrainConfig(epochs=a.epochs, window=a.window, seed=a.seed)
     model = train(train_eps, base, cfg)
@@ -44,26 +45,31 @@ def run_pipeline(a) -> dict:
     print(f"calibrated on {len(cal_nominal)} nominal episodes: GNN theta = {theta:.3f}, "
           f"service z = {z_service:.2f}, per-node z = {z_node:.2f} (same margin, zero false alarms on calibration)")
 
-    rows, false_alarms, nominal_count = [], {"threshold": 0, "zscore": 0, "service": 0, "gnn": 0}, 0
-    pre_onset_alarms = {"threshold": 0, "zscore": 0, "service": 0, "gnn": 0}
+    keys = ("threshold", "zscore", "service", "zscore3", "service3", "gnn")
+    rows, false_alarms, nominal_count = [], dict.fromkeys(keys, 0), 0
+    pre_onset_alarms = dict.fromkeys(keys, 0)
     orch = MockOrchestrator(exec_delay=a.exec_delay)
     sample_intent = None
     for i, ep in enumerate(test_eps):
         t_thr = threshold_alarm_detection(ep)
         t_z = zscore_detection(ep, z=z_node)
         t_s = service_zscore_trigger(ep, service_idx, mu_s, sd_s, z_service)
+        t_z3 = zscore_detection(ep, z=3.0)                                   # textbook z=3, uncalibrated
+        t_s3 = service_zscore_trigger(ep, service_idx, mu_s, sd_s, 3.0)      # textbook z=3, uncalibrated
         t_g = detect(model, ep, base, cfg.window, theta)
         if ep.fault is None:
             nominal_count += 1
-            for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("gnn", t_g)):
+            for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("zscore3", t_z3), ("service3", t_s3), ("gnn", t_g)):
                 false_alarms[k] += int(t is not None)
             continue
         # a firing before onset is a false alarm; detection delay is measured from the first firing at/after onset
-        for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("gnn", t_g)):
+        for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("zscore3", t_z3), ("service3", t_s3), ("gnn", t_g)):
             pre_onset_alarms[k] += int(t is not None and t < ep.onset)
         t_thr = threshold_alarm_detection(ep, start=ep.onset)
         t_z = zscore_detection(ep, z=z_node, start=ep.onset)
         t_s = service_zscore_trigger(ep, service_idx, mu_s, sd_s, z_service, start=ep.onset)
+        t_z3 = zscore_detection(ep, z=3.0, start=ep.onset)
+        t_s3 = service_zscore_trigger(ep, service_idx, mu_s, sd_s, 3.0, start=ep.onset)
         t_g = detect(model, ep, base, cfg.window, theta, start=ep.onset)
         t_rca = (t_g if t_g is not None else ep.onset) + a.rca_delay
         ranking = rank_root_causes(model, ep, base, cfg.window, t_rca)
@@ -87,6 +93,10 @@ def run_pipeline(a) -> dict:
             "delay_gnn": (t_g - ep.onset) if t_g is not None else None,
             "delay_threshold": (t_thr - ep.onset) if t_thr is not None else None,
             "delay_service": (t_s - ep.onset) if t_s is not None else None,
+            "t_service3": t_s3, "t_zscore3": t_z3,
+            "delay_service3": (t_s3 - ep.onset) if t_s3 is not None else None,
+            "delay_zscore3": (t_z3 - ep.onset) if t_z3 is not None else None,
+            "lead_vs_service3": lead_time(t_s3, t_g, ep.T), "lead_vs_zscore3": lead_time(t_z3, t_g, ep.T),
             "lead_vs_service": lead_time(t_s, t_g, ep.T),
             "lead_vs_threshold": lead_time(t_thr, t_g, ep.T),
             "lead_vs_zscore": lead_time(t_z, t_g, ep.T),
@@ -101,44 +111,50 @@ def run_pipeline(a) -> dict:
     summ = summarize(rows)
     n_f = len(rows)
     report = {
-        "config": {k: v for k, v in vars(a).items() if k != "fn"}, "twin": {"nodes": twin.n, "edges": int(len(twin.edges))}, "theta": theta,
+        "config": {k: v for k, v in vars(a).items() if k != "fn"}, "twin": {"nodes": twin.n, "edges": int(len(twin.edges))},
+        "theta": theta, "z_service": z_service, "z_node": z_node,
         "n_fault_episodes": n_f, "n_nominal_episodes": nominal_count,
         "false_alarms_on_nominal": false_alarms, "pre_onset_alarms_on_fault_episodes": pre_onset_alarms,
         "detection_rate": {"gnn": float(np.mean([r["detected_gnn"] for r in rows])),
                            "threshold": float(np.mean([r["detected_threshold"] for r in rows])),
-                           "service": float(np.mean([r["t_service"] is not None for r in rows]))},
+                           "service": float(np.mean([r["t_service"] is not None for r in rows])),
+                           "service3": float(np.mean([r["t_service3"] is not None for r in rows])),
+                           "zscore3": float(np.mean([r["t_zscore3"] is not None for r in rows]))},
         "healed_rate_within_3_cycles": float(np.mean([r["healed"] for r in rows])),
         "mean": summ, "by_fault": {}, "sample_intent": sample_intent, "orchestrator_log_head": orch.log[:3],
         "runtime_s": round(time.time() - t_start, 1),
     }
     for kind in sorted({r["fault"] for r in rows}):
-        report["by_fault"][kind] = summarize([r for r in rows if r["fault"] == kind])
+        sub = [r for r in rows if r["fault"] == kind]
+        report["by_fault"][kind] = {"n": len(sub), **summarize(sub)}
     (out / "report.json").write_text(json.dumps(report, indent=2, default=float))
     (out / "episodes.json").write_text(json.dumps(rows, indent=1, default=float))
     torch.save(model.state_dict(), out / "model.pt")
-    _write_markdown(report, out / "results.md")
+    report["detection_rate"]["zscore"] = float(np.mean([x["lead_vs_zscore"] is not None for x in rows]))
+    _write_markdown(report, out / "results.md", rows)
     print(open(out / "results.md").read())
     print("sample intent:", json.dumps(sample_intent["intent"], indent=1) if sample_intent else None)
     return report
 
 
-def _write_markdown(r: dict, path: Path) -> None:
-    m = r["mean"]
+def _write_markdown(r: dict, path: Path, rows_f: list[dict] | None = None) -> None:
+    m, fa, pa = r["mean"], r["false_alarms_on_nominal"], r["pre_onset_alarms_on_fault_episodes"]
+    rows_f = rows_f or []
     L = ["# Results", "",
          f"Twin: {r['twin']['nodes']} nodes, {r['twin']['edges']} edges. "
          f"Fault episodes: {r['n_fault_episodes']}, nominal: {r['n_nominal_episodes']}. Runtime {r['runtime_s']} s.", "",
          "| metric | value |", "|---|---|",
          f"| detection rate, GNN | {r['detection_rate']['gnn']:.2f} |",
          f"| detection rate, static threshold | {r['detection_rate']['threshold']:.2f} |",
-         f"| detection rate, service-layer z-score trigger | {r['detection_rate']['service']:.2f} |",
-         f"| false alarms on nominal episodes (GNN / threshold / service z / per-node z) | {r['false_alarms_on_nominal']['gnn']} / {r['false_alarms_on_nominal']['threshold']} / {r['false_alarms_on_nominal']['service']} / {r['false_alarms_on_nominal']['zscore']} of {r['n_nominal_episodes']} |",
-         f"| pre-onset false alarms on fault episodes (GNN / threshold / service z / per-node z) | {r['pre_onset_alarms_on_fault_episodes']['gnn']} / {r['pre_onset_alarms_on_fault_episodes']['threshold']} / {r['pre_onset_alarms_on_fault_episodes']['service']} / {r['pre_onset_alarms_on_fault_episodes']['zscore']} of {r['n_fault_episodes']} |",
-         f"| mean detection delay after onset, GNN (steps) | {m.get('delay_gnn', float('nan')):.1f} |",
-         f"| mean detection delay after onset, static threshold (steps) | {m.get('delay_threshold', float('nan')):.1f} |",
-         f"| mean detection delay after onset, service-layer z-score (steps) | {m.get('delay_service', float('nan')):.1f} |",
-         f"| mean lead time, GNN vs static threshold (steps, episodes where threshold fired) | {m.get('lead_vs_threshold', float('nan')):.1f} |",
-         f"| mean lead time, GNN vs service-layer z-score (steps, episodes where it fired) | {m.get('lead_vs_service', float('nan')):.1f} |",
-         f"| mean lead time, GNN vs per-node z-score (steps, episodes where it fired) | {m.get('lead_vs_zscore', float('nan')):.1f} |",
+         f"| detection rate, service-layer z-score (calibrated z={r['z_service']:.1f} / textbook z=3) | {r['detection_rate']['service']:.2f} / {r['detection_rate']['service3']:.2f} |",
+         f"| detection rate, per-node z-score (calibrated z={r['z_node']:.1f} / textbook z=3) | {r['detection_rate']['zscore']:.2f} / {r['detection_rate']['zscore3']:.2f} |",
+         f"| false alarms on {r['n_nominal_episodes']} nominal episodes: GNN / threshold / service z cal. / service z=3 / node z cal. / node z=3 | {fa['gnn']} / {fa['threshold']} / {fa['service']} / {fa['service3']} / {fa['zscore']} / {fa['zscore3']} |",
+         f"| pre-onset false alarms on {r['n_fault_episodes']} fault episodes: same order | {pa['gnn']} / {pa['threshold']} / {pa['service']} / {pa['service3']} / {pa['zscore']} / {pa['zscore3']} |",
+         f"| mean detection delay after onset (steps): GNN / static threshold | {m.get('delay_gnn', float('nan')):.1f} / {m.get('delay_threshold', float('nan')):.1f} |",
+         f"| mean detection delay after onset (steps): service z cal. / service z=3 / node z cal. / node z=3 | {m.get('delay_service', float('nan')):.1f} / {m.get('delay_service3', float('nan')):.1f} / {m.get('delay_zscore', float('nan')):.1f} / {m.get('delay_zscore3', float('nan')):.1f} |",
+         f"| mean lead time of GNN vs static threshold (steps, where it fired) | {m.get('lead_vs_threshold', float('nan')):.1f} |",
+         f"| mean lead time of GNN vs service z (calibrated / z=3) | {m.get('lead_vs_service', float('nan')):.1f} / {m.get('lead_vs_service3', float('nan')):.1f} |",
+         f"| mean lead time of GNN vs per-node z (calibrated / z=3) | {m.get('lead_vs_zscore', float('nan')):.1f} / {m.get('lead_vs_zscore3', float('nan')):.1f} |",
          f"| healed within 3 verify-and-re-trigger cycles | {r['healed_rate_within_3_cycles']:.2f} |",
          f"| mean healing cycles | {m.get('healing_cycles', 0):.2f} |",
          f"| root cause hit@1 | {m.get('hit@1', 0):.2f} |",
@@ -147,9 +163,10 @@ def _write_markdown(r: dict, path: Path) -> None:
          f"| triage reduction @3 (share of the war-room set a top-3 RCA list skips) | {m.get('triage_reduction@3', 0):.2f} |",
          f"| revenue-weighted exposure, GNN-timed healing | {m.get('exposure_gnn_loop', 0):.1f} |",
          f"| revenue-weighted exposure, threshold-timed healing | {m.get('exposure_threshold_loop', 0):.1f} |",
-         "", "## By fault type", "", "| fault | n | delay GNN | delay thr | hit@1 | hit@3 |", "|---|---|---|---|---|---|"]
+         "", "## By fault type", "", "| fault | n | delay GNN | delay thr | delay service z=3 | hit@1 | hit@3 |", "|---|---|---|---|---|---|---|"]
     for k, v in r["by_fault"].items():
-        L.append(f"| {k} | - | {v.get('delay_gnn', float('nan')):.1f} | {v.get('delay_threshold', float('nan')):.1f} | {v.get('hit@1', 0):.2f} | {v.get('hit@3', 0):.2f} |")
+        g = lambda kk, d=1: "-" if v.get(kk) is None else f"{v[kk]:.{d}f}"
+        L.append(f"| {k} | {v['n']} | {g('delay_gnn')} | {g('delay_threshold')} | {g('delay_service3')} | {g('hit@1',2)} | {g('hit@3',2)} |")
     path.write_text("\n".join(L) + "\n")
 
 
@@ -158,6 +175,7 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
     q = sub.add_parser("pipeline", help="run the full closed-loop experiment")
     q.add_argument("--episodes", type=int, default=120)
+    q.add_argument("--calibration-episodes", type=int, default=8)
     q.add_argument("--epochs", type=int, default=30)
     q.add_argument("--T", type=int, default=160)
     q.add_argument("--window", type=int, default=8)

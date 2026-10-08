@@ -18,3 +18,4 @@ docs/math/*.fdb_latexmk
 docs/math/*.synctex.gz
 docs/math/chapters/*.aux
 .DS_Store
+docs/math/main.pdf

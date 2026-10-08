@@ -3,20 +3,10 @@
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}[>=Latex, node distance=7mm,
-  b/.style={draw, thick, rounded corners=2pt, minimum height=9mm, minimum width=30mm, font=\small, align=center},
-  e/.style={->, thick, draw=ink!70}]
-\node[b, draw=core, fill=core!8] (biz) {Business intent\\ $R(v)/c(v)$ under $B$ \eqref{eq:selection}};
-\node[b, draw=ran, fill=ran!8, below=of biz] (gnn) {Graph intelligence\\ $\hat d,\ z$ on $G$ \eqref{eq:heads}};
-\node[b, draw=tra, fill=tra!8, below=of gnn] (exe) {Execution\\ intent $\to$ service orders $\to$ domain actions};
-\node[b, draw=svc, fill=svc!8, right=22mm of gnn] (twin) {Temporal twin\\ $X(t)$, $A$, $\mathrm{rev}$};
-\draw[e] (twin) -- (gnn) node[midway, above, font=\scriptsize] {KPI windows};
-\draw[e] (gnn) -- (biz) node[midway, right, font=\scriptsize] {ranking, $\hat d$};
-\draw[e] (biz) to[out=180, in=180] node[midway, left, font=\scriptsize] {ordered intent} (exe);
-\draw[e] (exe) -| node[pos=0.25, below, font=\scriptsize] {remediation applied} (twin);
-\end{tikzpicture}
-\caption{Three layers around a twin. The only input is the KPI stream; the only output is an
-ordered set of per-domain actions.}
+\includegraphics[width=0.78\textwidth]{../design/closed_loop.pdf}
+\caption{Five stages around a twin. The only input is the KPI stream; the only output is an
+ordered set of per-domain actions. Stages 1--2 are the learned model, stage 3 a one-line rule,
+stages 4--5 plumbing and verification.}
 \end{figure}
 
 \section{Decomposition}

@@ -9,12 +9,16 @@ the table changes.
 A single synthetic twin (Chapter~\ref{ch:domain}) is generated. Episodes of $T$ steps are
 simulated; a fraction are nominal, the rest carry one fault drawn from the catalogue of
 Chapter~\ref{ch:propagation} with a random origin of the matching type, a random onset in
-$[T/4,T/2)$, and a random severity and ramp. Episodes are split 60/15/25 into train, calibration
-and test. The model of Chapter~\ref{ch:symmetry} is trained with the loss \eqref{eq:loss}.
+$[T/4,T/2)$, and a random severity and ramp. Episodes are split 75/25 into train and test, and a
+separate set of nominal-only episodes with its own seed plays the role of clean operating history.
+The model of Chapter~\ref{ch:symmetry} is trained with the loss \eqref{eq:loss}.
 Every detector, the GNN field detector \eqref{eq:detection}, the service-layer $z$-score trigger,
-and the per-node rolling $z$-score, is calibrated on the \emph{same} nominal calibration episodes
-with the same margin, so each has zero false alarms on calibration data by construction. The
-static threshold is fixed at $2.5$ standardised units.
+and the per-node rolling $z$-score, is calibrated on the \emph{same} nominal episodes with the
+same margin, so each has zero false alarms on calibration data by construction. Because that
+calibration is strict (a maximum over every node and step of clean history), both $z$-score
+detectors are also reported at the textbook $z=3$ with a three-step confirmation gate, which is
+the setting an operator would more likely deploy, together with its false-alarm cost. The static
+threshold is fixed at $2.5$ standardised units.
 
 Metrics (Chapter~\ref{ch:closed} and below): a detector's delay is the first firing at or after
 onset; a firing before onset is counted as a false alarm. Lead time is reported only over episodes
@@ -35,8 +39,12 @@ or at the threshold-timed step.
 \section{Reading the table}
 \begin{itemize}[nosep]
   \item \textbf{Lead time.} The quantity the industry calls silent-degradation lead time is the
-  GNN-versus-static-threshold row. Positive is earlier. The per-node $z$-score row is the honest
-  comparison with a cheap statistical detector calibrated to the same false-alarm budget.
+  GNN-versus-static-threshold row. Positive is earlier. The $z$-score rows are the honest
+  comparison with cheap statistical detectors: at the calibrated false-alarm budget and at the
+  textbook setting. A service-layer trigger sees a cell's degradation diluted by the number of
+  carriers feeding each service, which is exactly why silent degradation is silent at the service
+  layer; the $z=3$ variant fires earlier at the cost of pre-onset false alarms, and the table shows
+  both numbers.
   \item \textbf{Root cause.} hit@1 is the fraction of episodes where the single top-ranked node is
   the injected origin, across all three domains in one softmax.
   \item \textbf{Healing cycles.} Because a remediation only removes the injection at the true

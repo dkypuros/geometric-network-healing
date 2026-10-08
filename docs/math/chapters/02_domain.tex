@@ -33,40 +33,41 @@ signatures on their neighbours.
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}[
-  >=Latex, node distance=9mm,
-  n/.style={draw, rounded corners=2pt, minimum width=14mm, minimum height=6.5mm, font=\small, thick},
+\begin{tikzpicture}[x=1cm, y=1cm, >=Latex,
+  n/.style={draw, rounded corners=2pt, minimum width=17mm, minimum height=6.5mm, font=\small, thick, fill=white},
   ran/.style={n, draw=ran, fill=ran!8}, tra/.style={n, draw=tra, fill=tra!8},
   core/.style={n, draw=core, fill=core!10}, svc/.style={n, draw=svc, fill=svc!8},
-  e/.style={->, thick, draw=ink!70}
+  e/.style={->, thick, draw=ink!70}, lab/.style={font=\scriptsize, fill=white, inner sep=1pt}
 ]
-\node[core] (amf) {amf};
-\node[core, right=of amf] (smf) {smf};
-\node[core, below=of smf] (upf) {upf};
-\node[tra, left=22mm of upf] (rc) {router (core)};
-\node[tra, below=of rc] (ra) {router (agg)};
-\node[tra, left=of ra] (lk) {link};
-\node[ran, below=of ra] (gnb) {gnb};
-\node[ran, below=of gnb] (cell) {cell};
-\node[svc, right=22mm of cell] (s) {service};
-\draw[e] (lk) -- (ra) node[midway, above, font=\scriptsize] {feeds};
-\draw[e] (rc) -- (ra) node[midway, right, font=\scriptsize] {feeds};
-\draw[e] (ra) -- (gnb) node[midway, right, font=\scriptsize] {backhauls};
-\draw[e] (gnb) -- (cell) node[midway, right, font=\scriptsize] {serves};
-\draw[e] (amf) to[out=200, in=160] node[pos=0.5, left, font=\scriptsize] {controls} (gnb);
-\draw[e] (smf) -- (upf) node[midway, right, font=\scriptsize] {controls};
-\draw[e] (rc) -- (upf) node[midway, above, font=\scriptsize] {feeds};
-\draw[e] (upf) -- (s) node[midway, right, font=\scriptsize] {terminates};
-\draw[e] (cell) -- (s) node[midway, above, font=\scriptsize] {carries};
-\begin{scope}[on background layer]
-\node[draw=ran!60, dashed, rounded corners, fit=(gnb)(cell), inner sep=4pt, label={[ran, font=\scriptsize]left:RAN}] {};
-\node[draw=tra!60, dashed, rounded corners, fit=(rc)(ra)(lk), inner sep=4pt, label={[tra, font=\scriptsize]left:Transport}] {};
-\node[draw=core!70, dashed, rounded corners, fit=(amf)(smf)(upf), inner sep=4pt, label={[core, font=\scriptsize]above:Core}] {};
-\end{scope}
+% columns: control plane x=-1.8 | transport/RAN spine x=1.5 | user plane / service x=5.0
+\node[core] (amf) at (-1.8, 3.0) {amf};
+\node[core] (smf) at (5.0, 3.0) {smf};
+\node[tra]  (rc)  at (1.5, 1.5)  {router (core)};
+\node[core] (upf) at (5.0, 1.5)  {upf};
+\node[tra]  (lk)  at (-1.8, 0)   {link};
+\node[tra]  (ra)  at (1.5, 0)    {router (agg)};
+\node[ran]  (gnb) at (1.5, -1.5) {gnb};
+\node[ran]  (cell) at (1.5, -3.0) {cell};
+\node[svc]  (s)   at (5.0, -3.0) {service};
+\draw[e] (lk) -- (ra) node[lab, midway, above] {feeds};
+\draw[e] (rc) -- (ra) node[lab, midway, right] {feeds};
+\draw[e] (ra) -- (gnb) node[lab, midway, right] {backhauls};
+\draw[e] (gnb) -- (cell) node[lab, midway, right] {serves};
+\draw[e] (rc) -- (upf) node[lab, midway, above] {feeds};
+\draw[e] (smf) -- (upf) node[lab, midway, right] {controls};
+\draw[e] (upf) -- (s) node[lab, midway, right] {terminates};
+\draw[e] (cell) -- (s) node[lab, midway, above] {carries};
+% control plane to RAN: down the clear left lane, then into gnb (never through a box)
+\draw[e] (amf.south) -- ++(0,-1.9) -- ++(-1.2,0) -- ++(0,-2.6) -- (gnb.west) node[lab, pos=0.55, left] {controls};
+% legend
+\node[font=\scriptsize, text=ran]  at (-1.8, -2.4) {RAN};
+\node[font=\scriptsize, text=tra]  at (-1.8, -2.8) {Transport};
+\node[font=\scriptsize, text=core] at (-1.8, -3.2) {Core};
+\node[font=\scriptsize, text=svc]  at (-1.8, -3.6) {Service};
 \end{tikzpicture}
-\caption{The node types and relations of \eqref{eq:graph}. Arrows point in the direction a fault
-propagates. A service is the trigger surface: a service-layer symptom is the only input the
-healing loop needs.}
+\caption{The node types and relations of \eqref{eq:graph}, colour-coded by domain. Arrows point in
+the direction a fault propagates. A service is the trigger surface: a service-layer symptom is the
+only input the healing loop needs.}
 \label{fig:domain}
 \end{figure}
 
