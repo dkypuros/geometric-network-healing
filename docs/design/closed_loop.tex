@@ -6,12 +6,12 @@
 \begin{tikzpicture}[arch, x=1cm, y=1cm]
 % Five stages on a ring (radius 4.2), one twin in the middle. Primary flow clockwise.
 \def\Rr{4.2}
-\node[box, fill=cTwin!10, draw=cTwin!80!black, minimum width=3.4cm, text width=3.0cm] (twin) at (0,0)
-  {Temporal twin\\ \sub{$X(t)$, $A$, rev, profile}};
-\node[learn, minimum width=3.7cm, text width=3.3cm] (sense) at (90:\Rr)  {1\ \ Sense\\ \sub{$a(t)=\max_v\hat d_v(t)>\theta$ (Eq.\,5.3)\\ no alarm required}};
-\node[learn] (loc)   at (18:\Rr)  {2\ \ Localise\\ \sub{rank $\V$ by $z_v$ (Eq.\,6.2)\\ cross-domain, one softmax}};
-\node[biz]   (prio)  at (-54:\Rr) {3\ \ Prioritise\\ \sub{$R(v)/c(v)$, one change per domain (Eq.\,7.3)}};
-\node[exec]  (exe)   at (-126:\Rr){4\ \ Execute\\ \sub{intent $\to$ service orders $\to$ domain actions}};
+\node[box, fill=cTwin!10, draw=cTwin!80!black, minimum width=4.0cm, text width=3.6cm] (twin) at (0,0)
+  {Temporal twin\\ \sub{$X(t)$, $A$, rev, profile, site $\sigma(v)$}};
+\node[learn, minimum width=3.7cm, text width=3.3cm] (sense) at (90:\Rr)  {1\ \ Sense at the site\\ \sub{$a_s(t)=\max_{v\in V_s}\hat d_v(t)$ (Eq.\,12.3)\\ merged: $\max_s a_s(t)>\theta$}};
+\node[learn, minimum width=3.5cm, text width=3.1cm] (loc)   at (18:\Rr)  {2\ \ Localise\\ \sub{site top-$k$ logits merged regionally;\\ regional origins: full-graph pass}};
+\node[biz, minimum width=3.7cm, text width=3.3cm]   (prio)  at (-54:\Rr) {3\ \ Prioritise\\ \sub{$R(v)/c(v)$ with $c(\textsf{psa})=c_{\mathrm{SSC}}(m)$ (Eq.\,12.2)}};
+\node[exec, minimum width=3.7cm, text width=3.3cm]  (exe)   at (-126:\Rr){4\ \ Execute\\ \sub{intent $\to$ orders $\to$ relocate PSA,\\ LADN fallback, cell reset}};
 \node[exec]  (ver)   at (162:\Rr) {5\ \ Verify\\ \sub{re-simulate; recovered? else re-trigger with next candidate}};
 \draw[flow-a] (sense) to[bend left=18] (loc);
 \draw[flow-a] (loc)   to[bend left=18] (prio);
@@ -23,7 +23,7 @@
 \draw[flow-b] (twin) -- (prio)  node[eq, pos=0.62, right] {rev, reach};
 \draw[flow-d] (exe)  -- (twin)  node[eq, pos=0.38, left] {remediation};
 \draw[flow-d] (ver)  -- (twin)  node[eq, pos=0.62, above] {$D(t)$ check};
-\node[font=\sffamily\bfseries] at (0, 6.3) {Closed loop: same fault, different response};
-\node[note] at (0, 5.85) {Stages 1--2 are the learned model; 3 is a one-line rule the operator can read; 4--5 are plumbing and verification.};
+\node[font=\sffamily\bfseries] at (0, 6.3) {Closed loop on an AI grid: same fault, different response};
+\node[note] at (0, 5.85) {Stages 1--2 run per site with a regional merge; 3 adds session-continuity cost; 4--5 act at the site and re-verify.};
 \end{tikzpicture}
 \end{document}

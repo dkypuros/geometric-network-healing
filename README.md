@@ -1,6 +1,29 @@
-# Geometric Network Healing
+# Geometric Network Healing, branch `edge-ai-grid`
 
-**Geometric deep learning for business-aware, self-healing telecom networks. Open math, open code, NVIDIA-accelerated.**
+**Geometric deep learning for business-aware, self-healing telecom networks, deployed on an NVIDIA AI grid: PDU session anchors and Local Area Data Networks in the twin, per-site inference at the edge, Dynamo for the agents around the model.**
+
+This branch extends [`master`](https://github.com/dkypuros/geometric-network-healing) with the edge. Everything on master still holds; what is new is below, then the base system follows.
+
+![AI grid deployment](docs/design/ai_grid.png)
+
+## What the edge changes
+
+| | master | edge-ai-grid |
+|---|---|---|
+| Twin | cells, gNBs, routers, links, UPF/AMF/SMF, services | + per site a **PDU Session Anchor UPF** (`psa`) and a **Local Area Data Network** (`ladn`) with its own edge service, behind a regional **I-UPF**; every node has a site index |
+| Faults | fiber, router, UPF, cell, AMF | + `psa_overload`, `ladn_dn_degrade` |
+| Remediation | per type | + `psa_relocate_ssc_mode{3,2,1}_to_backup` (re-anchor at the next site's PSA), `iupf_reselect_n9_path`, `ladn_fallback_to_regional_dn` |
+| Business cost | per type | **SSC mode** sets the cost of relocating an anchor: cheap for mode 3 (make-before-break), expensive for mode 1 (`--ssc-mode`) |
+| Inference | one full graph | the **same model per site** on a 23-node subgraph, 7 scalars per step uplinked, regional merge; measured against full-graph inference (`make pipeline-edge`) |
+| Serving | n/a | GNN under **Triton / TensorRT** on the site GPU shared with AI-RAN; **NVIDIA Dynamo** serves the LLM agents (disaggregated prefill at the hub, decode at the site, KV-aware routing, NIXL transfer) |
+
+Docs: [docs/edge-ai-grid.md](docs/edge-ai-grid.md), [deploy/ai-grid/topology.yaml](deploy/ai-grid/topology.yaml), Chapter 12 of the monograph. The AI-grid placement and Dynamo serving are documented, not exercised here; the partition cost is measured.
+
+![Closed loop on an AI grid](docs/design/closed_loop.png)
+
+---
+
+# Base system (from master)
 
 A telecom network is not a grid. It is a heterogeneous directed graph whose node labels carry no
 information, whose faults propagate along typed dependency edges, and whose business value sits in
@@ -29,9 +52,7 @@ Detection: a learned degradation field. Root cause: a learned inverse of the pro
 Business priority: a one-line knapsack rule the operator can read. The operator's moat is the data,
 not the model.
 
-The monograph is the argument: **[docs/math/geometric-network-healing.pdf](docs/math/geometric-network-healing.pdf)**.
-
-![Closed loop](docs/design/closed_loop.png)
+The monograph is the argument: **[docs/math/geometric-network-healing.pdf](docs/math/geometric-network-healing.pdf)** (this branch's build includes Chapter 12, the edge).
 
 ## Results
 
@@ -73,21 +94,6 @@ Twin: 74 nodes, 130 edges. Fault episodes: 32, nominal: 8. Runtime 643.8 s.
 *(CPU, fixed seed; regenerate with `make pipeline`.)*
 <!-- RESULTS:END -->
 
-## Branch `edge-ai-grid`: LADN, PDU session anchors, and the NVIDIA AI grid
-
-This branch extends the twin with 3GPP edge structure and measures per-site inference:
-
-- a **PDU Session Anchor UPF** (`psa`) and a **Local Area Data Network** (`ladn`) per site behind a
-  regional I-UPF, with their own faults (`psa_overload`, `ladn_dn_degrade`) and revenue;
-- **SSC mode** as the cost of the "relocate anchor to backup PSA" remediation (`--ssc-mode 1|2|3`);
-- **per-site inference**: the same model on each site's subgraph, only 7 scalars per step uplinked,
-  compared against full-graph inference on the same episodes (`make pipeline-edge`);
-- where the serving stack goes on an AI grid: Triton/TensorRT for the GNN at the site, **NVIDIA
-  Dynamo** for the LLM agents around it (disaggregated prefill/decode, KV-aware routing).
-
-See [docs/edge-ai-grid.md](docs/edge-ai-grid.md), `deploy/ai-grid/topology.yaml`, and Chapter 12
-of the monograph.
-
 ## Reproduce
 
 ```bash
@@ -95,7 +101,8 @@ git clone https://github.com/dkypuros/geometric-network-healing
 cd geometric-network-healing
 make setup        # uv venv, CPU PyTorch + PyTorch Geometric
 make test         # 6 tests, incl. a numerical permutation-equivariance check on the model
-make pipeline     # twin -> simulate -> baselines -> GNN -> detect -> RCA -> intent -> closed loop
+make pipeline     # base twin: simulate -> baselines -> GNN -> detect -> RCA -> intent -> closed loop
+make pipeline-edge  # edge twin with per-site vs full-graph inference (this branch's results table)
 cat results/results.md
 make pdf          # the monograph (needs a TeX distribution)
 ```
@@ -117,7 +124,8 @@ src/gnn_healing/
   evaluation/     Ch. 9  lead time, hit@k, triage reduction, exposure
   cli.py                 gnn-healing pipeline | twin | backend
 docs/math/        the monograph (LaTeX, PDF committed)
-docs/design/      TikZ architecture diagrams (source + PNG)
+docs/design/      TikZ diagrams: ai_grid (this branch), architecture, closed_loop (source + PNG)
+deploy/ai-grid/   illustrative AI-grid deployment shape (roles, flows); not a tested config
 docs/nvidia.md    the accelerated path
 docs/industry-comparison.md   how this relates to a 2026 TM Forum Catalyst of the same shape
 tests/            twin invariants, propagation stability, model equivariance, intent ordering

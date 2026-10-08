@@ -99,6 +99,13 @@ at the metro hub for regional-origin faults. The table in Chapter~\ref{ch:experi
 branch reports hit@1 separately for site-local and regional origins.
 
 \section{Where the serving stack goes}
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{../design/ai_grid.pdf}
+\caption{Deployment shape on an AI grid. The site GNN and the agent decode worker share the site
+GPU with the AI-RAN baseband; the hub holds the regional full-graph pass, the business layer, and
+Dynamo's router and prefill worker. Only site summaries go up; only remediation comes down.}
+\end{figure}
 The GNN is small and latency-bound, not throughput-bound: it belongs under a standard inference
 server at the site, on the GPU the AI-RAN baseband already occupies. NVIDIA Dynamo is the wrong
 tool for the GNN and the right tool for the reasoning agents around it. The industry design wraps
