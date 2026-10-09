@@ -26,6 +26,7 @@ from gnn_healing.gnn.detect import _scores
 from gnn_healing.baselines.flatness import FlatnessSolver, identify_operator
 from gnn_healing.evaluation import hit_at_k
 
+ONLY = set(a for a in sys.argv[1:])            # e.g. e3 e5 e6 : rerun only those, reuse cached E2 + model
 root = Path(__file__).resolve().parents[1]
 out_dir = root / "results"; fig_dir = root / "docs" / "flatness"
 T, W, EPOCHS, RCA_DELAY, SEED = 160, 8, 20, 5, 0
@@ -62,91 +63,110 @@ def eval_flat(solver, tests, cal):
         t = (tf if tf is not None else ep.onset) + RCA_DELAY
         r = solver.rank(ep, t)
         h1.append(hit_at_k(r, ep.origin, 1)); h3.append(hit_at_k(r, ep.origin, 3))
-        dl.append(None if tf is None else tf - ep.onset); db.append(solver.doubt(ep, t))
+        dl.append(None if tf is None else tf - ep.onset); db.append(solver.doubt(ep, t + 15, theta))
     d = [x for x in dl if x is not None]
     return {"hit@1": float(np.mean(h1)), "hit@3": float(np.mean(h3)),
             "detection_rate": len(d) / len(tests), "delay": float(np.mean(d)) if d else None,
             "doubt": float(np.mean(db))}
 
 
-R = {"config": {"T": T, "window": W, "epochs": EPOCHS, "rca_delay": RCA_DELAY, "seed": SEED,
-                "n_test_faults": len(test_f)}}
+json_path = out_dir / "flatness_experiments.json"
+R = json.loads(json_path.read_text()) if (ONLY and json_path.exists()) else {}
+R["config"] = {"T": T, "window": W, "epochs": EPOCHS, "rca_delay": RCA_DELAY, "seed": SEED, "n_test_faults": len(test_f)}
 flatA = FlatnessSolver(twinA)
+model_path = out_dir / "flatness_gnn_full.pt"
+want = lambda e: (not ONLY) or (e in ONLY)
 
 # ---------------- E2: learning curve
-log("E2 learning curve")
-curve, models = [], {}
-for n in [4, 8, 16, 32, 64, 120]:
-    torch.manual_seed(SEED)
-    m = train(train_eps[:n], baseA, TrainConfig(epochs=EPOCHS, window=W, seed=SEED), log=quiet)
-    models[n] = m
-    g = eval_gnn(m, twinA, baseA, test_f, calA)
-    n_labels = sum(1 for e in train_eps[:n] if e.fault is not None)
-    curve.append({"train_episodes": n, "labelled_fault_episodes": n_labels, **g})
-    log(f"  n={n:3d} labelled={n_labels:3d} hit@1={g['hit@1']:.2f} delay={g['delay']}")
+if want("e2"):
+    log("E2 learning curve")
+    curve, models = [], {}
+    for n in [4, 8, 16, 32, 64, 120]:
+        torch.manual_seed(SEED)
+        m = train(train_eps[:n], baseA, TrainConfig(epochs=EPOCHS, window=W, seed=SEED), log=quiet)
+        models[n] = m
+        g = eval_gnn(m, twinA, baseA, test_f, calA)
+        n_labels = sum(1 for e in train_eps[:n] if e.fault is not None)
+        curve.append({"train_episodes": n, "labelled_fault_episodes": n_labels, **g})
+        log(f"  n={n:3d} labelled={n_labels:3d} hit@1={g['hit@1']:.2f} delay={g['delay']}")
+    gnn_full = models[120]
+    torch.save(gnn_full.state_dict(), model_path)
+else:
+    from gnn_healing.gnn import HealingGNN
+    if model_path.exists():
+        gnn_full = HealingGNN(W); gnn_full.load_state_dict(torch.load(model_path)); gnn_full.eval()
+    else:
+        log("training the full GNN once (E2 cached)")
+        torch.manual_seed(SEED)
+        gnn_full = train(train_eps, baseA, TrainConfig(epochs=EPOCHS, window=W, seed=SEED), log=quiet)
+        torch.save(gnn_full.state_dict(), model_path)
+    curve = R["E2"]["gnn"]
 flat_full = eval_flat(flatA, test_f, calA)
 R["E2"] = {"gnn": curve, "flatness": flat_full}
-log(f"  flatness hit@1={flat_full['hit@1']:.2f} delay={flat_full['delay']}")
-gnn_full = models[120]
+log(f"  flatness hit@1={flat_full['hit@1']:.2f} delay={flat_full['delay']} doubt={flat_full['doubt']:.2f}")
 
 # ---------------- E3: two simultaneous faults
-log("E3 two faults")
-rng = np.random.default_rng(123)
-both_g, any_g, both_f, any_f = [], [], [], []
-for i in range(30):
-    f1 = sample_fault(twinA.nodes, T, rng)
-    f2 = sample_fault(twinA.nodes, T, rng)
-    while f2.origin == f1.origin or f2.kind == f1.kind:
-        f2 = sample_fault(twinA.nodes, T, rng)
-    ep = simulate(twinA, T, [f1, f2], np.random.default_rng(500 + i))
-    t = min(max(f1.onset, f2.onset) + 12, T - 1)
-    _, rca = _scores(gnn_full, ep, baseA, W)
-    rg = np.argsort(-rca[t])[:2].tolist()
-    rf = flatA.rank(ep, t)[:2]
-    origins = {f1.origin, f2.origin}
-    both_g.append(float(set(rg) == origins)); any_g.append(float(len(set(rg) & origins) > 0))
-    both_f.append(float(set(rf) == origins)); any_f.append(float(len(set(rf) & origins) > 0))
-R["E3"] = {"n": 30, "gnn": {"both_in_top2": float(np.mean(both_g)), "any_in_top2": float(np.mean(any_g))},
-           "flatness": {"both_in_top2": float(np.mean(both_f)), "any_in_top2": float(np.mean(any_f))}}
-log(f"  both-in-top2  GNN {np.mean(both_g):.2f}  flatness {np.mean(both_f):.2f}")
+if want("e3"):
+  log("E3 two faults")
+  rng = np.random.default_rng(123)
+  both_g, any_g, both_f, any_f = [], [], [], []
+  for i in range(30):
+      f1 = sample_fault(twinA.nodes, T, rng)
+      f2 = sample_fault(twinA.nodes, T, rng)
+      while f2.origin == f1.origin or f2.kind == f1.kind:
+          f2 = sample_fault(twinA.nodes, T, rng)
+      ep = simulate(twinA, T, [f1, f2], np.random.default_rng(500 + i))
+      t = min(max(f1.onset + f1.ramp, f2.onset + f2.ramp) + 5, T - 1)      # after both ramps complete
+      _, rca = _scores(gnn_full, ep, baseA, W)
+      rg = np.argsort(-rca[t])[:2].tolist()
+      rf = flatA.rank(ep, t)[:2]
+      origins = {f1.origin, f2.origin}
+      both_g.append(float(set(rg) == origins)); any_g.append(float(len(set(rg) & origins) > 0))
+      both_f.append(float(set(rf) == origins)); any_f.append(float(len(set(rf) & origins) > 0))
+  R["E3"] = {"n": 30, "gnn": {"both_in_top2": float(np.mean(both_g)), "any_in_top2": float(np.mean(any_g))},
+             "flatness": {"both_in_top2": float(np.mean(both_f)), "any_in_top2": float(np.mean(any_f))}}
+  log(f"  both-in-top2  GNN {np.mean(both_g):.2f}  flatness {np.mean(both_f):.2f}")
 
 # ---------------- E4: new topology, no retraining
-log("E4 new topology")
-twinB = generate_twin(n_core=3, n_agg=8, gnb_per_agg=2, cells_per_gnb=3, n_upf=3, n_services=8, seed=7)
-baseB = twinB.to_pyg()
-testB = [e for e in make_episodes(twinB, 50, T=T, seed=7) if e.fault is not None]
-calB = make_episodes(twinB, 8, T=T, nominal_fraction=1.0, seed=7 + 10_000)
-gB = eval_gnn(gnn_full, twinB, baseB, testB, calB)
-fB = eval_flat(FlatnessSolver(twinB), testB, calB)
-R["E4"] = {"twin_B": {"nodes": twinB.n, "edges": int(len(twinB.edges))}, "n": len(testB), "gnn_zero_shot": gB, "flatness": fB}
-log(f"  twin B {twinB.n} nodes: GNN zero-shot hit@1={gB['hit@1']:.2f}  flatness hit@1={fB['hit@1']:.2f}")
+if want("e4"):
+  log("E4 new topology")
+  twinB = generate_twin(n_core=3, n_agg=8, gnb_per_agg=2, cells_per_gnb=3, n_upf=3, n_services=8, seed=7)
+  baseB = twinB.to_pyg()
+  testB = [e for e in make_episodes(twinB, 50, T=T, seed=7) if e.fault is not None]
+  calB = make_episodes(twinB, 8, T=T, nominal_fraction=1.0, seed=7 + 10_000)
+  gB = eval_gnn(gnn_full, twinB, baseB, testB, calB)
+  fB = eval_flat(FlatnessSolver(twinB), testB, calB)
+  R["E4"] = {"twin_B": {"nodes": twinB.n, "edges": int(len(twinB.edges))}, "n": len(testB), "gnn_zero_shot": gB, "flatness": fB}
+  log(f"  twin B {twinB.n} nodes: GNN zero-shot hit@1={gB['hit@1']:.2f}  flatness hit@1={fB['hit@1']:.2f}")
 
 # ---------------- E5: identify the operator from unlabelled episodes
-log("E5 identification")
-rho_hat, beta_hat = identify_operator(twinA, train_eps)
-fid = eval_flat(FlatnessSolver(twinA, rho=rho_hat, beta=beta_hat), test_f, calA)
-R["E5"] = {"true": {"rho": PropagationParams().rho, "beta": PropagationParams().beta},
-           "identified": {"rho": rho_hat, "beta": beta_hat}, "episodes_used": len(train_eps), "labels_used": 0,
-           "flatness_with_identified": fid}
-log(f"  rho {rho_hat:.3f} (true {PropagationParams().rho})  beta {beta_hat:.3f} (true {PropagationParams().beta})  hit@1={fid['hit@1']:.2f}")
+if want("e5"):
+  log("E5 identification")
+  rho_hat, beta_hat = identify_operator(twinA, train_eps)
+  fid = eval_flat(FlatnessSolver(twinA, rho=rho_hat, beta=beta_hat), test_f, calA)
+  R["E5"] = {"true": {"rho": PropagationParams().rho, "beta": PropagationParams().beta},
+             "identified": {"rho": rho_hat, "beta": beta_hat}, "episodes_used": len(train_eps), "labels_used": 0,
+             "flatness_with_identified": fid}
+  log(f"  rho {rho_hat:.3f} (true {PropagationParams().rho})  beta {beta_hat:.3f} (true {PropagationParams().beta})  hit@1={fid['hit@1']:.2f}")
 
 # ---------------- E6: misspecified physics at test time
-log("E6 misspecification")
-rows = []
-for i, (rho_s, beta_s) in enumerate([(0.85, 0.13), (0.80, 0.13), (0.72, 0.11), (0.62, 0.09)]):
-    prop = PropagationParams(rho=rho_s, beta=beta_s)
-    e_mis = make_episodes(twinA, 50, T=T, seed=900 + i, prop=prop)
-    tf_mis = [e for e in e_mis if e.fault is not None]
-    cal_mis = make_episodes(twinA, 8, T=T, nominal_fraction=1.0, seed=900 + i + 10_000, prop=prop)
-    g = eval_gnn(gnn_full, twinA, baseA, tf_mis, cal_mis)                  # trained at (0.85, 0.13)
-    f_assumed = eval_flat(flatA, tf_mis, cal_mis)                           # assumes (0.85, 0.13)
-    rh, bh = identify_operator(twinA, e_mis)                                # self-calibrate, no labels
-    f_ident = eval_flat(FlatnessSolver(twinA, rho=rh, beta=bh), tf_mis, cal_mis)
-    rows.append({"rho_sim": rho_s, "beta_sim": beta_s, "attenuation_per_hop": beta_s / (1 - rho_s), "n": len(tf_mis),
-                 "gnn": g, "flatness_assumed": f_assumed, "identified": {"rho": rh, "beta": bh}, "flatness_identified": f_ident})
-    log(f"  sim ({rho_s},{beta_s}): GNN hit@1={g['hit@1']:.2f}  flat(assumed) hit@1={f_assumed['hit@1']:.2f} doubt={f_assumed['doubt']:.2f}"
-        f"  flat(identified rho={rh:.2f},beta={bh:.3f}) hit@1={f_ident['hit@1']:.2f} doubt={f_ident['doubt']:.2f}")
-R["E6"] = rows
+if want("e6"):
+  log("E6 misspecification")
+  rows = []
+  for i, (rho_s, beta_s) in enumerate([(0.85, 0.13), (0.80, 0.13), (0.72, 0.11), (0.62, 0.09)]):
+      prop = PropagationParams(rho=rho_s, beta=beta_s)
+      e_mis = make_episodes(twinA, 50, T=T, seed=900 + i, prop=prop)
+      tf_mis = [e for e in e_mis if e.fault is not None]
+      cal_mis = make_episodes(twinA, 8, T=T, nominal_fraction=1.0, seed=900 + i + 10_000, prop=prop)
+      g = eval_gnn(gnn_full, twinA, baseA, tf_mis, cal_mis)                  # trained at (0.85, 0.13)
+      f_assumed = eval_flat(flatA, tf_mis, cal_mis)                           # assumes (0.85, 0.13)
+      rh, bh = identify_operator(twinA, e_mis)                                # self-calibrate, no labels
+      f_ident = eval_flat(FlatnessSolver(twinA, rho=rh, beta=bh), tf_mis, cal_mis)
+      rows.append({"rho_sim": rho_s, "beta_sim": beta_s, "attenuation_per_hop": beta_s / (1 - rho_s), "n": len(tf_mis),
+                   "gnn": g, "flatness_assumed": f_assumed, "identified": {"rho": rh, "beta": bh}, "flatness_identified": f_ident})
+      log(f"  sim ({rho_s},{beta_s}): GNN hit@1={g['hit@1']:.2f}  flat(assumed) hit@1={f_assumed['hit@1']:.2f} doubt={f_assumed['doubt']:.2f}"
+          f"  flat(identified rho={rh:.2f},beta={bh:.3f}) hit@1={f_ident['hit@1']:.2f} doubt={f_ident['doubt']:.2f}")
+  R["E6"] = rows
 
 # ---------------- E1: worked incident figure
 log("E1 figure")
@@ -174,7 +194,8 @@ ax.set_ylim(0, 1.05); ax.legend(loc="lower right", fontsize=8); ax.grid(alpha=0.
 fig.savefig(fig_dir / "fig_learning_curve.pdf"); plt.close(fig)
 
 R["runtime_s"] = round(time.time() - t0, 1)
-(out_dir / "flatness_experiments.json").write_text(json.dumps(R, indent=2, default=float))
+json_path.write_text(json.dumps(R, indent=2, default=float))
+curve = R["E2"]["gnn"]; flat_full = R["E2"]["flatness"]; rows = R["E6"]
 
 # ---------------- LaTeX tables
 def fmt(x, d=2): return "--" if x is None else f"{x:.{d}f}"

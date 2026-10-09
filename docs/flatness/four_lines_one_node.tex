@@ -156,9 +156,12 @@ every metric, so it is a fair stand-in for the architecture class the industry u
 \input{results_table}
 \begin{figure}[h]
 \centering\includegraphics[width=\textwidth]{fig_incident}
-\caption{One fibre degradation. Left: the raw latency KPI of every node over time; the fault is
-invisible. Middle: the filtered field $\hat d$. Right: the residual $\hat s$. One row lights up.
-That row is the answer, and the explanation is the equation that produced it.}
+\caption{One fibre degradation, onset at the dashed line. Left: the raw latency KPI of every node.
+Three rows eventually light up: the link and two nodes downstream of it, and a static alarm would
+flag all three, late. Middle: the filtered field $\hat d$, the blast radius. Right: the residual
+$\hat s=\hat d(t)-M\hat d(t{-}1)$. The downstream rows vanish because they are flat under the
+operator. One row remains. That row is the answer, and the explanation is the equation that
+removed the other two.}
 \end{figure}
 \input{tab_e1}
 
@@ -166,7 +169,12 @@ That row is the answer, and the explanation is the equation that produced it.}
 The GNN is retrained with 4, 8, 16, 32, 64 and 120 training episodes and evaluated on the same
 held-out faults. The read-off is evaluated once; it has nothing to train.
 \input{tab_e2}
-\begin{center}\includegraphics[width=0.6\textwidth]{fig_learning_curve}\end{center}
+This experiment does not separate the methods, and I want to say that plainly rather than draw a
+curve. On this twin four labelled episodes are enough for the GNN, because the five fault types
+each leave a distinct per-type signature and the graph is small. The honest reading is that label
+efficiency is not where the read-off's advantage shows on an easy twin. Whether it shows on a real
+network, where fault signatures overlap and labelled incidents number in the dozens per year, is
+exactly the experiment in the final section.
 
 \subsection*{E3. Two faults at once}
 Thirty episodes with two simultaneous faults of different types at different origins. Each method
@@ -178,6 +186,11 @@ A second twin with a different seed, more core and aggregation routers, more UPF
 GNN trained on twin A is evaluated zero-shot. The read-off recomputes $M$ from the new topology and
 nothing else.
 \input{tab_e4}
+Again no separation, and again the reason is worth stating: a relational GNN is inductive by
+construction, its weights are indexed by relation type, not by node, so it transfers across
+topologies that share a vocabulary. That is a genuine strength of the learned model and the
+monograph builds on it. The read-off transfers for a different reason: it never had node-specific
+parameters to begin with.
 
 \subsection*{E5. Identify the operator with zero labels}
 $(\rho,\beta)$ are identified from the 120 training episodes with their fault labels discarded, then
