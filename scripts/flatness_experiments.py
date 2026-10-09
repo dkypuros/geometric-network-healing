@@ -225,10 +225,10 @@ e5 = R["E5"]
  r"\midrule" "\n"
  f"read-off with identified operator: hit@1 / hit@3 / delay & \\multicolumn{{3}}{{r}}{{{fmt(e5['flatness_with_identified']['hit@1'])} / {fmt(e5['flatness_with_identified']['hit@3'])} / {fmt(e5['flatness_with_identified']['delay'],1)}}} \\\\\n"
  r"\bottomrule\end{tabular}\end{center}" "\n")
-L = [r"\begin{center}\small\begin{tabular}{@{}lrrrrrr@{}}\toprule test physics $(\rho,\beta)$ & per-hop & GNN hit@1 & read-off hit@1 (assumed) & doubt & identified $(\hat\rho,\hat\beta)$ & read-off hit@1 (identified) \\ \midrule"]
+L = [r"\begin{center}\footnotesize\begin{tabular}{@{}lrrrrrr@{}}\toprule test $(\rho,\beta)$ & per-hop & GNN & read-off, assumed & doubt & identified $(\hat\rho,\hat\beta)$ & read-off, identified \\ \midrule"]
 for r_ in rows:
     L.append(f"({r_['rho_sim']:.2f}, {r_['beta_sim']:.2f}) & {r_['attenuation_per_hop']:.2f} & {fmt(r_['gnn']['hit@1'])} & {fmt(r_['flatness_assumed']['hit@1'])} & {fmt(r_['flatness_assumed']['doubt'])} & ({r_['identified']['rho']:.2f}, {r_['identified']['beta']:.3f}) & {fmt(r_['flatness_identified']['hit@1'])} \\\\")
-L += [r"\bottomrule\end{tabular}\end{center}"]
+L += [r"\bottomrule\end{tabular}\end{center}", r"\noindent{\footnotesize GNN and read-off columns are hit@1. Doubt is \eqref{eq:doubt} for the assumed operator.}"]
 (fig_dir / "tab_e6.tex").write_text("\n".join(L) + "\n")
 mo = R["E1"]["moduli_read_off"]
 (fig_dir / "tab_e1.tex").write_text(

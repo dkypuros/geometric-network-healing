@@ -1,0 +1,256 @@
+{
+  "config": {
+    "T": 160,
+    "window": 8,
+    "epochs": 20,
+    "rca_delay": 5,
+    "seed": 0,
+    "n_test_faults": 32
+  },
+  "E2": {
+    "gnn": [
+      {
+        "train_episodes": 4,
+        "labelled_fault_episodes": 4,
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 26.625
+      },
+      {
+        "train_episodes": 8,
+        "labelled_fault_episodes": 8,
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 24.625
+      },
+      {
+        "train_episodes": 16,
+        "labelled_fault_episodes": 16,
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 27.03125
+      },
+      {
+        "train_episodes": 32,
+        "labelled_fault_episodes": 30,
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 23.90625
+      },
+      {
+        "train_episodes": 64,
+        "labelled_fault_episodes": 58,
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 23.53125
+      },
+      {
+        "train_episodes": 120,
+        "labelled_fault_episodes": 105,
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 22.5625
+      }
+    ],
+    "flatness": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 23.84375,
+      "doubt": 0.13673106394708157
+    }
+  },
+  "E3": {
+    "n": 30,
+    "gnn": {
+      "both_in_top2": 1.0,
+      "any_in_top2": 1.0
+    },
+    "flatness": {
+      "both_in_top2": 1.0,
+      "any_in_top2": 1.0
+    }
+  },
+  "E4": {
+    "twin_B": {
+      "nodes": 99,
+      "edges": 179
+    },
+    "n": 35,
+    "gnn_zero_shot": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 23.228571428571428
+    },
+    "flatness": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 28.542857142857144,
+      "doubt": 0.9172543781144279
+    }
+  },
+  "E5": {
+    "true": {
+      "rho": 0.85,
+      "beta": 0.13
+    },
+    "identified": {
+      "rho": 0.8575240891518027,
+      "beta": 0.0835499614609376
+    },
+    "episodes_used": 120,
+    "labels_used": 0,
+    "flatness_with_identified": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 23.84375,
+      "doubt": 0.1434028185904026
+    }
+  },
+  "E6": [
+    {
+      "rho_sim": 0.85,
+      "beta_sim": 0.13,
+      "attenuation_per_hop": 0.8666666666666666,
+      "n": 35,
+      "gnn": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 25.685714285714287
+      },
+      "flatness_assumed": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 25.34285714285714,
+        "doubt": 0.11738650628498622
+      },
+      "identified": {
+        "rho": 0.8440511501445154,
+        "beta": 0.09287217629715609
+      },
+      "flatness_identified": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 25.2,
+        "doubt": 0.1091876711164202
+      }
+    },
+    {
+      "rho_sim": 0.8,
+      "beta_sim": 0.13,
+      "attenuation_per_hop": 0.6500000000000001,
+      "n": 37,
+      "gnn": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 25.0
+      },
+      "flatness_assumed": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 29.81081081081081,
+        "doubt": 0.020907202282467403
+      },
+      "identified": {
+        "rho": 0.8231597428631365,
+        "beta": 0.02857295888537702
+      },
+      "flatness_identified": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 30.054054054054053,
+        "doubt": 0.0
+      }
+    },
+    {
+      "rho_sim": 0.72,
+      "beta_sim": 0.11,
+      "attenuation_per_hop": 0.39285714285714285,
+      "n": 39,
+      "gnn": {
+        "hit@1": 0.9487179487179487,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 30.512820512820515
+      },
+      "flatness_assumed": {
+        "hit@1": 0.8974358974358975,
+        "hit@3": 0.8974358974358975,
+        "detection_rate": 0.8974358974358975,
+        "delay": 45.34285714285714,
+        "doubt": 0.0
+      },
+      "identified": {
+        "rho": 0.7975974018647152,
+        "beta": 0.0
+      },
+      "flatness_identified": {
+        "hit@1": 1.0,
+        "hit@3": 1.0,
+        "detection_rate": 1.0,
+        "delay": 43.94871794871795,
+        "doubt": 0.0
+      }
+    },
+    {
+      "rho_sim": 0.62,
+      "beta_sim": 0.09,
+      "attenuation_per_hop": 0.23684210526315788,
+      "n": 43,
+      "gnn": {
+        "hit@1": 0.9302325581395349,
+        "hit@3": 0.9534883720930233,
+        "detection_rate": 0.9767441860465116,
+        "delay": 42.857142857142854
+      },
+      "flatness_assumed": {
+        "hit@1": 0.6744186046511628,
+        "hit@3": 0.6744186046511628,
+        "detection_rate": 0.6744186046511628,
+        "delay": 49.37931034482759,
+        "doubt": 0.0
+      },
+      "identified": {
+        "rho": 0.7865371081078408,
+        "beta": 0.0
+      },
+      "flatness_identified": {
+        "hit@1": 0.5581395348837209,
+        "hit@3": 0.5581395348837209,
+        "detection_rate": 0.5581395348837209,
+        "delay": 46.416666666666664,
+        "doubt": 0.0
+      }
+    }
+  ],
+  "E1": {
+    "episode_fault": "fiber_degrade",
+    "origin": 19,
+    "onset": 63,
+    "moduli_read_off": {
+      "origin": 19,
+      "onset": 23,
+      "severity": 0.35986244678497314
+    },
+    "true": {
+      "severity_per_step": 0.45154541212141586,
+      "ramp": 21
+    }
+  },
+  "runtime_s": 2.1
+}

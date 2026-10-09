@@ -35,11 +35,13 @@ The monograph is the argument: **[docs/math/geometric-network-healing.pdf](docs/
 
 ## Four lines and one node
 
-A short paper, written first-person, on where this came from: four years on a 64×64 grid, where a
-rectangle is the support of a discrete derivative. A network fault is the same object under the
-propagation operator, and reading off the support localises the root cause with **zero learned
-parameters**. The paper compares that read-off against the trained GNN on the same episodes and
-says exactly what the comparison does and does not show, then states what one person needs next.
+A short first-person paper. On a network with a known linear propagation operator, the root cause
+is the support of a residual: apply the operator to the degradation field and read where it is not
+zero. That read-off, with **zero learned parameters**, ties the 241k-parameter GNN on detection,
+false alarms and root cause on the same episodes. Five further experiments try to separate the two
+and are all reported: three ties, one where the read-off identifies the operator from unlabelled
+telemetry, and one where the GNN is the more robust method under misspecified physics. The paper
+ends with what one person needs next.
 
 **[docs/flatness/four_lines_one_node.pdf](docs/flatness/four_lines_one_node.pdf)** (`make paper`; the solver is `baselines/flatness.py`).
 

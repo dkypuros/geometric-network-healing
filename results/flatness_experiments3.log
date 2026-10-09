@@ -1,0 +1,13 @@
+/Users/davidkypuros/Documents/Git_Offline/active/90.open-ai-experiments_BOOKMARK/94_tmforum_google_verizon/geometric-network-healing/.venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[     0s] twin A: 74 nodes; train 120, test faults 32
+[     2s]   flatness hit@1=1.00 delay=23.84375 doubt=0.14
+[     2s] E5 identification
+[     4s]   rho 0.858 (true 0.85)  beta 0.084 (true 0.13)  hit@1=1.00
+[     4s] E6 misspecification
+[   105s]   sim (0.85,0.13): GNN hit@1=1.00  flat(assumed) hit@1=1.00 doubt=0.12  flat(identified rho=0.84,beta=0.093) hit@1=1.00 doubt=0.11
+[   210s]   sim (0.8,0.13): GNN hit@1=1.00  flat(assumed) hit@1=1.00 doubt=0.02  flat(identified rho=0.82,beta=0.029) hit@1=1.00 doubt=0.00
+[   320s]   sim (0.72,0.11): GNN hit@1=0.95  flat(assumed) hit@1=0.90 doubt=0.00  flat(identified rho=0.80,beta=0.000) hit@1=1.00 doubt=0.00
+[   441s]   sim (0.62,0.09): GNN hit@1=0.93  flat(assumed) hit@1=0.67 doubt=0.00  flat(identified rho=0.79,beta=0.000) hit@1=0.56 doubt=0.00
+[   441s] E1 figure
+[   442s] done

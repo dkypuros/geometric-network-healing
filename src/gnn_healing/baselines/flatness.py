@@ -33,14 +33,12 @@ def identify_operator(twin: Twin, episodes: list[Episode], iters: int = 20, delt
     P = propagation_matrix(twin)
     E = twin.effect_matrix(); proj = E / np.maximum((E ** 2).sum(axis=1, keepdims=True), 1e-6)
     xs, ys = [], []
-    k = np.ones(5) / 5.0                      # light smoothing of the projected field before regression
     for ep in episodes:
         d = np.einsum("tnk,nk->tn", ep.X, proj)
-        d = np.apply_along_axis(lambda c: np.convolve(c, k, mode="same"), 0, d)
         d = np.maximum(d, 0.0)
         xs.append(np.stack([d[:-1].ravel(), (d[:-1] @ P.T).ravel()], axis=1)); ys.append(d[1:].ravel())
     X = np.concatenate(xs); y = np.concatenate(ys)
-    keep = (X[:, 0] > 0.5) & (y > 0.3)        # steps where the field is visibly present on both sides
+    keep = X[:, 0] > 0.3                      # only steps with a visible field carry information about M
     X, y = X[keep], y[keep]
     w = np.ones(len(y))
     for _ in range(iters):
@@ -114,7 +112,8 @@ class FlatnessSolver:
         top-k is near zero. Under a wrong operator the downstream nodes stop being flat and the
         share rises. Nodes outside the degraded set carry only noise and are excluded on purpose."""
         d_hat = self.field(ep); t = min(max(t, 1), ep.T - 1)
-        acc = self.source(d_hat)[max(1, t - self.window + 1):t + 1].sum(axis=0)
+        resid = np.zeros_like(d_hat); resid[1:] = d_hat[1:] - d_hat[:-1] @ self.M.T   # unsigned: flat means ~0 either way
+        acc = np.abs(resid)[max(1, t - self.window + 1):t + 1].sum(axis=0)
         degraded = d_hat[t] > theta
         if degraded.sum() <= k:
             return 0.0

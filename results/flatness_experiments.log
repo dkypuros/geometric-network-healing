@@ -2,3 +2,23 @@
   warnings.warn(
 [     0s] twin A: 74 nodes; train 120, test faults 32
 [     0s] E2 learning curve
+[   128s]   n=  4 labelled=  4 hit@1=1.00 delay=26.625
+[   236s]   n=  8 labelled=  8 hit@1=1.00 delay=24.625
+[   362s]   n= 16 labelled= 16 hit@1=1.00 delay=27.03125
+[   528s]   n= 32 labelled= 30 hit@1=1.00 delay=23.90625
+[   772s]   n= 64 labelled= 58 hit@1=1.00 delay=23.53125
+[  1154s]   n=120 labelled=105 hit@1=1.00 delay=22.5625
+[  1155s]   flatness hit@1=1.00 delay=23.84375
+[  1155s] E3 two faults
+[  1193s]   both-in-top2  GNN 0.30  flatness 0.27
+[  1193s] E4 new topology
+[  1295s]   twin B 99 nodes: GNN zero-shot hit@1=1.00  flatness hit@1=1.00
+[  1295s] E5 identification
+[  1297s]   rho 0.858 (true 0.85)  beta 0.084 (true 0.13)  hit@1=1.00
+[  1297s] E6 misspecification
+[  1396s]   sim (0.85,0.13): GNN hit@1=1.00  flat(assumed) hit@1=1.00 doubt=0.90  flat(identified rho=0.84,beta=0.093) hit@1=1.00 doubt=0.90
+[  1500s]   sim (0.8,0.13): GNN hit@1=1.00  flat(assumed) hit@1=1.00 doubt=0.90  flat(identified rho=0.82,beta=0.029) hit@1=1.00 doubt=0.91
+[  1610s]   sim (0.72,0.11): GNN hit@1=0.95  flat(assumed) hit@1=0.90 doubt=0.91  flat(identified rho=0.80,beta=-0.009) hit@1=1.00 doubt=0.92
+[  1730s]   sim (0.62,0.09): GNN hit@1=0.93  flat(assumed) hit@1=0.67 doubt=0.93  flat(identified rho=0.79,beta=-0.016) hit@1=0.56 doubt=0.93
+[  1730s] E1 figure
+[  1731s] done
