@@ -228,7 +228,7 @@ e5 = R["E5"]
 L = [r"\begin{center}\footnotesize\begin{tabular}{@{}lrrrrrr@{}}\toprule test $(\rho,\beta)$ & per-hop & GNN & read-off, assumed & doubt & identified $(\hat\rho,\hat\beta)$ & read-off, identified \\ \midrule"]
 for r_ in rows:
     L.append(f"({r_['rho_sim']:.2f}, {r_['beta_sim']:.2f}) & {r_['attenuation_per_hop']:.2f} & {fmt(r_['gnn']['hit@1'])} & {fmt(r_['flatness_assumed']['hit@1'])} & {fmt(r_['flatness_assumed']['doubt'])} & ({r_['identified']['rho']:.2f}, {r_['identified']['beta']:.3f}) & {fmt(r_['flatness_identified']['hit@1'])} \\\\")
-L += [r"\bottomrule\end{tabular}\end{center}", r"\noindent{\footnotesize GNN and read-off columns are hit@1. Doubt is \eqref{eq:doubt} for the assumed operator.}"]
+L += [r"\bottomrule\end{tabular}\end{center}", r"\noindent{\footnotesize GNN and read-off columns are hit@1. Doubt is \eqref{eq:doubt} for the assumed operator.}\par\medskip"]
 (fig_dir / "tab_e6.tex").write_text("\n".join(L) + "\n")
 mo = R["E1"]["moduli_read_off"]
 (fig_dir / "tab_e1.tex").write_text(
