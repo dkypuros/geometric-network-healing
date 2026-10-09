@@ -9,7 +9,7 @@ Observed KPI (Eq. 4.3):
 The GNN never sees d; it sees x and the graph. Labels come from d and the fault.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 from ..twin.generator import Twin
 from .faults import Fault
@@ -34,8 +34,9 @@ class PropagationParams:
 class Episode:
     X: np.ndarray            # [T, N, K] observed KPIs
     D: np.ndarray            # [T, N] latent degradation field (ground truth)
-    fault: Fault | None
+    fault: Fault | None      # primary fault (first), kept for the single-origin pipeline
     T: int
+    faults: list = field(default_factory=list)   # all injected faults (multi-origin experiments)
 
     @property
     def onset(self) -> int:
@@ -46,7 +47,7 @@ class Episode:
         return self.fault.origin if self.fault else -1
 
 
-def simulate(twin: Twin, T: int, fault: Fault | None, rng: np.random.Generator,
+def simulate(twin: Twin, T: int, fault: "Fault | list[Fault] | None", rng: np.random.Generator,
              nominal: NominalParams = NominalParams(),
              prop: PropagationParams = PropagationParams(),
              remediate_at: int | None = None) -> Episode:
@@ -66,13 +67,17 @@ def simulate(twin: Twin, T: int, fault: Fault | None, rng: np.random.Generator,
     X = np.zeros((T, N, K), dtype=np.float32)
     D = np.zeros((T, N), dtype=np.float32)
 
+    faults = [] if fault is None else (fault if isinstance(fault, list) else [fault])
     for t in range(T):
         eps = nominal.ar * eps + rng.normal(0, nominal.noise, size=(N, K))
         n = amp * np.sin(2 * np.pi * t / nominal.period + phase) + eps
         inj = np.zeros(N, dtype=np.float32)
-        if fault is not None and (remediate_at is None or t < remediate_at):
-            inj[fault.origin] = fault.injection(t)
+        if remediate_at is None or t < remediate_at:
+            for f in faults:
+                inj[f.origin] += f.injection(t)
         d = prop.rho * d + prop.beta * (P @ d) + inj
         D[t] = d
         X[t] = n + d[:, None] * E
-    return Episode(X=X, D=D, fault=fault, T=T)
+    ep = Episode(X=X, D=D, fault=faults[0] if faults else None, T=T)
+    ep.faults = faults
+    return ep

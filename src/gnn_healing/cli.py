@@ -16,6 +16,7 @@ from .gnn.detect import degradation_estimate
 from .intent import propose_branches, select_order, to_tmf921_intent
 from .orchestration import decompose_to_service_orders, MockOrchestrator, closed_loop, healing_cycles
 from .evaluation import lead_time, hit_at_k, triage_reduction, summarize
+from .baselines.flatness import FlatnessSolver
 
 
 def run_pipeline(a) -> dict:
@@ -42,10 +43,13 @@ def run_pipeline(a) -> dict:
     mu_s, sd_s = service_baseline(cal_nominal, service_idx)
     z_service = calibrate_service_z(cal_nominal, service_idx, mu_s, sd_s)
     z_node = calibrate_zscore(cal_nominal)
+    flat = FlatnessSolver(twin)
+    theta_flat = flat.calibrate(cal_nominal)
+    print(f"flatness solver (no training): theta_flat = {theta_flat:.3f}")
     print(f"calibrated on {len(cal_nominal)} nominal episodes: GNN theta = {theta:.3f}, "
           f"service z = {z_service:.2f}, per-node z = {z_node:.2f} (same margin, zero false alarms on calibration)")
 
-    keys = ("threshold", "zscore", "service", "zscore3", "service3", "gnn")
+    keys = ("threshold", "zscore", "service", "zscore3", "service3", "gnn", "flatness")
     rows, false_alarms, nominal_count = [], dict.fromkeys(keys, 0), 0
     pre_onset_alarms = dict.fromkeys(keys, 0)
     orch = MockOrchestrator(exec_delay=a.exec_delay)
@@ -57,14 +61,18 @@ def run_pipeline(a) -> dict:
         t_z3 = zscore_detection(ep, z=3.0)                                   # textbook z=3, uncalibrated
         t_s3 = service_zscore_trigger(ep, service_idx, mu_s, sd_s, 3.0)      # textbook z=3, uncalibrated
         t_g = detect(model, ep, base, cfg.window, theta)
+        t_f = flat.detect(ep, theta_flat)
         if ep.fault is None:
             nominal_count += 1
-            for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("zscore3", t_z3), ("service3", t_s3), ("gnn", t_g)):
+            for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("zscore3", t_z3), ("service3", t_s3), ("gnn", t_g), ("flatness", t_f)):
                 false_alarms[k] += int(t is not None)
             continue
         # a firing before onset is a false alarm; detection delay is measured from the first firing at/after onset
-        for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("zscore3", t_z3), ("service3", t_s3), ("gnn", t_g)):
+        for k, t in (("threshold", t_thr), ("zscore", t_z), ("service", t_s), ("zscore3", t_z3), ("service3", t_s3), ("gnn", t_g), ("flatness", t_f)):
             pre_onset_alarms[k] += int(t is not None and t < ep.onset)
+        t_f = flat.detect(ep, theta_flat, start=ep.onset)
+        t_f_rca = (t_f if t_f is not None else ep.onset) + a.rca_delay
+        ranking_f = flat.rank(ep, t_f_rca)
         t_thr = threshold_alarm_detection(ep, start=ep.onset)
         t_z = zscore_detection(ep, z=z_node, start=ep.onset)
         t_s = service_zscore_trigger(ep, service_idx, mu_s, sd_s, z_service, start=ep.onset)
@@ -101,6 +109,11 @@ def run_pipeline(a) -> dict:
             "lead_vs_threshold": lead_time(t_thr, t_g, ep.T),
             "lead_vs_zscore": lead_time(t_z, t_g, ep.T),
             "hit@1": hit_at_k(ranking, ep.origin, 1), "hit@3": hit_at_k(ranking, ep.origin, 3),
+            "t_flatness": t_f, "detected_flatness": t_f is not None,
+            "delay_flatness": (t_f - ep.onset) if t_f is not None else None,
+            "lead_flatness_vs_gnn": lead_time(t_g, t_f, ep.T),
+            "hit@1_flatness": hit_at_k(ranking_f, ep.origin, 1), "hit@3_flatness": hit_at_k(ranking_f, ep.origin, 3),
+            "flatness_agrees_gnn_top1": float(ranking_f[0] == ranking[0]),
             "n_degraded_at_alarm": n_deg, "triage_reduction@3": triage_reduction(3, n_deg),
             "healing_cycles": gnn_loop["cycles"], "healed": gnn_loop["healed"],
             "exposure_gnn_loop": gnn_loop["revenue_weighted_exposure"],
@@ -110,7 +123,8 @@ def run_pipeline(a) -> dict:
 
     summ = summarize(rows)
     n_f = len(rows)
-    report = {
+    n_params = sum(p.numel() for p in model.parameters())
+    report = {"model_params": int(n_params),
         "config": {k: v for k, v in vars(a).items() if k != "fn"}, "twin": {"nodes": twin.n, "edges": int(len(twin.edges))},
         "theta": theta, "z_service": z_service, "z_node": z_node,
         "n_fault_episodes": n_f, "n_nominal_episodes": nominal_count,
@@ -121,6 +135,7 @@ def run_pipeline(a) -> dict:
                            "service3": float(np.mean([r["t_service3"] is not None for r in rows])),
                            "zscore3": float(np.mean([r["t_zscore3"] is not None for r in rows]))},
         "healed_rate_within_3_cycles": float(np.mean([r["healed"] for r in rows])),
+        "flatness": {"detection_rate": float(np.mean([r["detected_flatness"] for r in rows])), "theta": theta_flat},
         "mean": summ, "by_fault": {}, "sample_intent": sample_intent, "orchestrator_log_head": orch.log[:3],
         "runtime_s": round(time.time() - t_start, 1),
     }
@@ -163,10 +178,19 @@ def _write_markdown(r: dict, path: Path, rows_f: list[dict] | None = None) -> No
          f"| triage reduction @3 (share of the war-room set a top-3 RCA list skips) | {m.get('triage_reduction@3', 0):.2f} |",
          f"| revenue-weighted exposure, GNN-timed healing | {m.get('exposure_gnn_loop', 0):.1f} |",
          f"| revenue-weighted exposure, threshold-timed healing | {m.get('exposure_threshold_loop', 0):.1f} |",
-         "", "## By fault type", "", "| fault | n | delay GNN | delay thr | delay service z=3 | hit@1 | hit@3 |", "|---|---|---|---|---|---|---|"]
+         "", "## Flatness solve vs trained GNN (same episodes, same calibration, zero training)", "",
+         "| metric | trained GNN | flatness solve |", "|---|---|---|",
+         f"| detection rate | {r['detection_rate']['gnn']:.2f} | {r['flatness']['detection_rate']:.2f} |",
+         f"| false alarms on nominal / pre-onset on fault episodes | {fa['gnn']} / {pa['gnn']} | {fa['flatness']} / {pa['flatness']} |",
+         f"| mean detection delay after onset (steps) | {m.get('delay_gnn', float('nan')):.1f} | {m.get('delay_flatness', float('nan')):.1f} |",
+         f"| mean lead time of flatness over GNN (steps, where GNN fired) | - | {m.get('lead_flatness_vs_gnn', float('nan')):.1f} |",
+         f"| root cause hit@1 / hit@3 | {m.get('hit@1', 0):.2f} / {m.get('hit@3', 0):.2f} | {m.get('hit@1_flatness', 0):.2f} / {m.get('hit@3_flatness', 0):.2f} |",
+         f"| top-1 agreement between the two | - | {m.get('flatness_agrees_gnn_top1', 0):.2f} |",
+         f"| parameters learned | {r['model_params']:,} | 0 |",
+         "", "## By fault type", "", "| fault | n | delay GNN | delay flatness | delay thr | hit@1 GNN | hit@1 flatness |", "|---|---|---|---|---|---|---|"]
     for k, v in r["by_fault"].items():
         g = lambda kk, d=1: "-" if v.get(kk) is None else f"{v[kk]:.{d}f}"
-        L.append(f"| {k} | {v['n']} | {g('delay_gnn')} | {g('delay_threshold')} | {g('delay_service3')} | {g('hit@1',2)} | {g('hit@3',2)} |")
+        L.append(f"| {k} | {v['n']} | {g('delay_gnn')} | {g('delay_flatness')} | {g('delay_threshold')} | {g('hit@1',2)} | {g('hit@1_flatness',2)} |")
     path.write_text("\n".join(L) + "\n")
 
 

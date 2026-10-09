@@ -19,3 +19,7 @@ docs/math/*.synctex.gz
 docs/math/chapters/*.aux
 .DS_Store
 docs/math/main.pdf
+# LaTeX build artifacts
+docs/flatness/*.aux
+docs/flatness/*.log
+docs/flatness/*.out

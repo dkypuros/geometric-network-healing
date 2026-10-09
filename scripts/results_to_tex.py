@@ -40,3 +40,29 @@ out += ["\\bottomrule\\end{tabular}\\end{center}",
         f"seed={r['config']['seed']}. Runtime {r['runtime_s']}\\,s on CPU.}}"]
 (root / "docs" / "math" / "chapters" / "09_experiments_table.tex").write_text("\n".join(out) + "\n")
 print("wrote 09_experiments_table.tex")
+
+# ---- second output: the flatness paper's table (docs/flatness/results_table.tex)
+if "flatness" in r:
+    fl = r["flatness"]
+    rows2 = [
+      ("Fault episodes / nominal episodes", f"{r['n_fault_episodes']} / {r['n_nominal_episodes']}", ""),
+      ("Parameters learned", f"{r.get('model_params', 0):,}", "0"),
+      ("Detection rate", f"{dr['gnn']:.2f}", f"{fl['detection_rate']:.2f}"),
+      ("False alarms on nominal / pre-onset on fault episodes", f"{fa['gnn']} / {pa['gnn']}", f"{fa.get('flatness',0)} / {pa.get('flatness',0)}"),
+      ("Detection delay after onset (steps)", f('delay_gnn'), f('delay_flatness')),
+      ("Root cause hit@1 / hit@3", f"{f('hit@1',2)} / {f('hit@3',2)}", f"{f('hit@1_flatness',2)} / {f('hit@3_flatness',2)}"),
+      ("Top-1 agreement between the two", "", f('flatness_agrees_gnn_top1', 2)),
+      ("Static-threshold alarm delay, for scale (steps)", f('delay_threshold'), f('delay_threshold')),
+    ]
+    out2 = ["\\begin{center}\\small\\begin{tabular}{@{}p{7.2cm}rr@{}}\\toprule Metric & trained GNN & flatness solve \\\\ \\midrule"]
+    out2 += [f"{a} & {b} & {c} \\\\" for a, b, c in rows2]
+    out2 += ["\\bottomrule\\end{tabular}\\end{center}", "",
+             "\\begin{center}\\small\\begin{tabular}{@{}lrrrrr@{}}\\toprule Fault type & $n$ & delay GNN & delay flatness & hit@1 GNN & hit@1 flatness \\\\ \\midrule"]
+    for k, v in r["by_fault"].items():
+        g = lambda kk, d=1: "--" if v.get(kk) is None else f"{v[kk]:.{d}f}"
+        out2.append(f"{k.replace('_', ' ')} & {v.get('n','-')} & {g('delay_gnn')} & {g('delay_flatness')} & {g('hit@1',2)} & {g('hit@1_flatness',2)} \\\\")
+    out2 += ["\\bottomrule\\end{tabular}\\end{center}",
+             f"\\noindent\\textit{{Twin: {r['twin']['nodes']} nodes, {r['twin']['edges']} edges; {r['config']['episodes']} episodes, seed {r['config']['seed']}; "
+             f"GNN trained {r['config']['epochs']} epochs; both detectors calibrated on the same nominal episodes. Runtime {r['runtime_s']}\\,s on CPU.}}"]
+    (root / "docs" / "flatness" / "results_table.tex").write_text("\n".join(out2) + "\n")
+    print("wrote docs/flatness/results_table.tex")

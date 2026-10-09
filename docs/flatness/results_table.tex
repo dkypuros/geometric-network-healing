@@ -1,0 +1,19 @@
+\begin{center}\small\begin{tabular}{@{}p{7.2cm}rr@{}}\toprule Metric & trained GNN & flatness solve \\ \midrule
+Fault episodes / nominal episodes & 32 / 8 &  \\
+Parameters learned & 241,222 & 0 \\
+Detection rate & 1.00 & 1.00 \\
+False alarms on nominal / pre-onset on fault episodes & 0 / 0 & 0 / 0 \\
+Detection delay after onset (steps) & 22.9 & 23.8 \\
+Root cause hit@1 / hit@3 & 1.00 / 1.00 & 1.00 / 1.00 \\
+Top-1 agreement between the two &  & 1.00 \\
+Static-threshold alarm delay, for scale (steps) & 32.6 & 32.6 \\
+\bottomrule\end{tabular}\end{center}
+
+\begin{center}\small\begin{tabular}{@{}lrrrrr@{}}\toprule Fault type & $n$ & delay GNN & delay flatness & hit@1 GNN & hit@1 flatness \\ \midrule
+amf signaling storm & 7 & 27.9 & 31.7 & 1.00 & 1.00 \\
+fiber degrade & 7 & 22.7 & 23.0 & 1.00 & 1.00 \\
+router congestion & 7 & 22.3 & 23.6 & 1.00 & 1.00 \\
+sleeping cell & 8 & 18.5 & 17.1 & 1.00 & 1.00 \\
+upf overload & 3 & 24.7 & 26.0 & 1.00 & 1.00 \\
+\bottomrule\end{tabular}\end{center}
+\noindent\textit{Twin: 74 nodes, 130 edges; 160 episodes, seed 0; GNN trained 30 epochs; both detectors calibrated on the same nominal episodes. Runtime 647.1\,s on CPU.}
