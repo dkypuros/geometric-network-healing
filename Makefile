@@ -16,6 +16,12 @@ pdf:              ## render results into the monograph and README, then compile
 	python3 scripts/results_to_tex.py && python3 scripts/results_to_readme.py
 	cd docs/math && latexmk -pdf -interaction=nonstopmode main.tex > /dev/null && cp main.pdf geometric-network-healing.pdf
 
+ontology:         ## show the ontology's relation vocabulary and couplings
+	uv run python -m gnn_healing.ontology
+
+e7:               ## E7: per-relation coupling identified from unlabelled telemetry
+	uv run python scripts/ontology_experiment.py
+
 experiments:      ## E2-E6 for the flatness paper (learning curve, two faults, new topology, identification, misspecification)
 	uv run python scripts/flatness_experiments.py
 

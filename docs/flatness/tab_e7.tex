@@ -1,0 +1,28 @@
+\begin{center}\small\begin{tabular}{@{}lrrrrr@{}}\toprule
+relation & true $\beta_r$ & single & per-relation & grouped & clean-field \\ \midrule
+\texttt{link-$>$router} & 0.140 & 0.024 & 0.098 & 0.037 & 0.140 \\
+\texttt{router(core)-$>$router(agg)} & 0.130 & 0.024 & 0.106 & 0.037 & 0.130 \\
+\texttt{router(agg)-$>$gnb} & 0.120 & 0.024 & 0.078 & 0.037 & 0.120 \\
+\texttt{gnb-$>$cell} & 0.110 & 0.024 & 0.000 & 0.037 & 0.110 \\
+\texttt{amf-$>$gnb} & 0.040 & 0.024 & 0.000 & 0.000 & 0.040 \\
+\texttt{smf-$>$upf} & 0.040 & 0.024 & 0.000 & 0.000 & 0.000 \\
+\texttt{router(core)-$>$upf} & 0.120 & 0.024 & 0.100 & 0.037 & 0.120 \\
+\texttt{upf-$>$service} & 0.100 & 0.024 & 0.007 & 0.000 & 0.100 \\
+\texttt{cell-$>$service} & 0.060 & 0.024 & 0.000 & 0.000 & 0.060 \\
+\midrule
+mean absolute error & & 0.0716 & 0.0523 & 0.0751 & 0.0044 \\
+spread recovered (true 0.100) & & 0.000 & 0.106 & 0.037 & 0.140 \\
+free coefficients & & 1 & 9 & 3 & 9 \\
+condition number & & -- & 1.49e+03 & 160 & -- \\
+\bottomrule\end{tabular}\end{center}
+
+\begin{center}\small\begin{tabular}{@{}lrrr@{}}\toprule
+operator & hit@1 & hit@3 & detection delay \\ \midrule
+assumed single $\beta=0.13$, no identification & 1.00 & 1.00 & 23.9 \\
+identified single $\beta$, 0 labels & 1.00 & 1.00 & 24.2 \\
+identified $\beta_r$ per relation, 0 labels & 1.00 & 1.00 & 24.2 \\
+identified $\beta_r$ tied by the ontology hierarchy, 0 labels & 1.00 & 1.00 & 24.1 \\
+\emph{upper bound}: $\beta_r$ fitted on the true field & 1.00 & 1.00 & 23.8 \\
+oracle: the ontology's true $\beta_r$ & 1.00 & 1.00 & 23.8 \\
+\bottomrule\end{tabular}\end{center}
+\noindent\textit{Twin propagating with the ontology's heterogeneous couplings; 32 held-out faults; identification used 120 episodes with their labels discarded.}

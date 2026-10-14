@@ -1,0 +1,134 @@
+@prefix gnh:  <https://github.com/dkypuros/geometric-network-healing/ontology#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+#################################################################
+# Geometric Network Healing ontology
+#
+# This file is NOT documentation. It is load-bearing mathematics.
+#
+# The propagation operator of the method is
+#
+#     M  =  rho * I  +  SUM over relations r of ( beta_r * P_r )
+#
+# and the sum is indexed by the object properties declared below.
+# Each relation carries gnh:coupling, which IS beta_r. Change a number
+# here and the operator changes, the Kalman filter changes, and the
+# root-cause residual changes. src/gnn_healing/ontology.py reads this
+# file; tests/test_ontology.py fails if it drifts from the Python enums.
+#
+# The class and property hierarchies are equally load-bearing: a
+# relational GNN keeps one weight matrix per object property, so the
+# property hierarchy below is that model's weight-sharing scheme.
+#################################################################
+
+<https://github.com/dkypuros/geometric-network-healing/ontology>
+    a owl:Ontology ;
+    dct:title "Geometric Network Healing ontology" ;
+    dct:description "Node types, directed propagation relations, and per-relation coupling for fault propagation on a telecom topology." ;
+    owl:versionInfo "0.1.0" .
+
+#################################################################
+# Node classes.  Hierarchy gives a new node type an inherited
+# embedding and an inherited effect direction (Chapter 2).
+#################################################################
+
+gnh:NetworkElement a owl:Class ;
+    rdfs:comment "Anything that can carry KPIs and participate in fault propagation." .
+
+gnh:RANElement       a owl:Class ; rdfs:subClassOf gnh:NetworkElement ; gnh:domainName "RAN" .
+gnh:TransportElement a owl:Class ; rdfs:subClassOf gnh:NetworkElement ; gnh:domainName "Transport" .
+gnh:CoreElement      a owl:Class ; rdfs:subClassOf gnh:NetworkElement ; gnh:domainName "Core" .
+gnh:ServiceElement   a owl:Class ; rdfs:subClassOf gnh:NetworkElement ; gnh:domainName "Service" .
+
+gnh:ControlPlaneFunction a owl:Class ; rdfs:subClassOf gnh:CoreElement ;
+    rdfs:comment "Degrades sessions without carrying their user plane." .
+gnh:UserPlaneFunction    a owl:Class ; rdfs:subClassOf gnh:CoreElement .
+
+gnh:Cell    a owl:Class ; rdfs:subClassOf gnh:RANElement       ; gnh:pythonName "cell" .
+gnh:GNB     a owl:Class ; rdfs:subClassOf gnh:RANElement       ; gnh:pythonName "gnb" .
+gnh:Router  a owl:Class ; rdfs:subClassOf gnh:TransportElement ; gnh:pythonName "router" .
+gnh:Link    a owl:Class ; rdfs:subClassOf gnh:TransportElement ; gnh:pythonName "link" ;
+    rdfs:comment "A link is a node, not an edge, so that it can carry its own KPIs and be named as a root cause." .
+gnh:UPF     a owl:Class ; rdfs:subClassOf gnh:UserPlaneFunction    ; gnh:pythonName "upf" .
+gnh:AMF     a owl:Class ; rdfs:subClassOf gnh:ControlPlaneFunction ; gnh:pythonName "amf" .
+gnh:SMF     a owl:Class ; rdfs:subClassOf gnh:ControlPlaneFunction ; gnh:pythonName "smf" .
+gnh:Service a owl:Class ; rdfs:subClassOf gnh:ServiceElement   ; gnh:pythonName "service" .
+
+#################################################################
+# Properties carrying the mathematics
+#################################################################
+
+gnh:coupling a owl:DatatypeProperty ;
+    rdfs:domain owl:ObjectProperty ; rdfs:range xsd:decimal ;
+    rdfs:comment "beta_r: the fraction of a cause's degradation its effects inherit per step along this relation. Stability requires max(beta_r) / (1 - rho) < 1." .
+
+gnh:pythonName a owl:DatatypeProperty ;
+    rdfs:comment "The value of the matching member of the Python enum. Tests assert the two agree." .
+
+gnh:domainName a owl:DatatypeProperty ;
+    rdfs:comment "Operational domain used by the business layer for the one-change-per-domain policy." .
+
+#################################################################
+# Directed propagation relations.
+# Direction is cause -> effect, which is what makes the adjacency the
+# forward operator and its transpose the adjoint used for inference.
+#################################################################
+
+gnh:propagatesTo a owl:ObjectProperty ;
+    rdfs:domain gnh:NetworkElement ; rdfs:range gnh:NetworkElement ;
+    rdfs:comment "Superproperty of every relation along which degradation flows." .
+
+# -- transport and radio: a cause physically carries its effects, strong coupling
+gnh:feeds a owl:ObjectProperty ; rdfs:subPropertyOf gnh:propagatesTo ;
+    rdfs:comment "The effect depends on the cause for transport or bearer capacity." .
+
+# -- control plane: a cause governs its effects without carrying them, weak coupling
+gnh:controls a owl:ObjectProperty ; rdfs:subPropertyOf gnh:propagatesTo ;
+    rdfs:comment "The effect depends on the cause for signalling or session state only." .
+
+# -- service exposure
+gnh:exposes a owl:ObjectProperty ; rdfs:subPropertyOf gnh:propagatesTo ;
+    rdfs:comment "The effect is a service observed through the cause." .
+
+gnh:linkFeedsRouter a owl:ObjectProperty ; rdfs:subPropertyOf gnh:feeds ;
+    rdfs:domain gnh:Link ; rdfs:range gnh:Router ;
+    gnh:pythonName "link->router" ; gnh:coupling 0.14 ;
+    rdfs:comment "Strongest relation in the model: a degraded fibre takes everything behind it." .
+
+gnh:coreFeedsAgg a owl:ObjectProperty ; rdfs:subPropertyOf gnh:feeds ;
+    rdfs:domain gnh:Router ; rdfs:range gnh:Router ;
+    gnh:pythonName "router(core)->router(agg)" ; gnh:coupling 0.13 .
+
+gnh:aggBackhaulsGnb a owl:ObjectProperty ; rdfs:subPropertyOf gnh:feeds ;
+    rdfs:domain gnh:Router ; rdfs:range gnh:GNB ;
+    gnh:pythonName "router(agg)->gnb" ; gnh:coupling 0.12 .
+
+gnh:coreFeedsUpf a owl:ObjectProperty ; rdfs:subPropertyOf gnh:feeds ;
+    rdfs:domain gnh:Router ; rdfs:range gnh:UPF ;
+    gnh:pythonName "router(core)->upf" ; gnh:coupling 0.12 .
+
+gnh:gnbServesCell a owl:ObjectProperty ; rdfs:subPropertyOf gnh:feeds ;
+    rdfs:domain gnh:GNB ; rdfs:range gnh:Cell ;
+    gnh:pythonName "gnb->cell" ; gnh:coupling 0.11 .
+
+gnh:upfTerminatesService a owl:ObjectProperty ; rdfs:subPropertyOf gnh:exposes ;
+    rdfs:domain gnh:UPF ; rdfs:range gnh:Service ;
+    gnh:pythonName "upf->service" ; gnh:coupling 0.10 .
+
+gnh:cellCarriesService a owl:ObjectProperty ; rdfs:subPropertyOf gnh:exposes ;
+    rdfs:domain gnh:Cell ; rdfs:range gnh:Service ;
+    gnh:pythonName "cell->service" ; gnh:coupling 0.06 ;
+    rdfs:comment "Weak because a service is carried by many cells, so one cell's degradation is diluted. This is why silent degradation is silent at the service layer." .
+
+gnh:amfControlsGnb a owl:ObjectProperty ; rdfs:subPropertyOf gnh:controls ;
+    rdfs:domain gnh:AMF ; rdfs:range gnh:GNB ;
+    gnh:pythonName "amf->gnb" ; gnh:coupling 0.04 ;
+    rdfs:comment "Control plane: a signalling storm degrades attach and mobility, it does not remove bearer capacity." .
+
+gnh:smfControlsUpf a owl:ObjectProperty ; rdfs:subPropertyOf gnh:controls ;
+    rdfs:domain gnh:SMF ; rdfs:range gnh:UPF ;
+    gnh:pythonName "smf->upf" ; gnh:coupling 0.04 .

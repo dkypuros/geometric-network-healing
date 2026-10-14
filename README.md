@@ -126,6 +126,31 @@ them. The sharpest one: the change-risk concurrency policy in
 [`select_order()`](src/gnn_healing/intent/biem.py#L53) uses a per-process set, which is correct for
 the single-loop experiment here and breaks the moment two sites heal at once.
 
+## The ontology is load-bearing
+
+[`docs/ontology/network-healing.ttl`](docs/ontology/network-healing.ttl) is not documentation.
+It declares a coupling on each of the nine propagation relations, and that coupling is the
+per-relation term in the operator:
+
+```
+M = rho*I + sum over relations r of ( beta_r * P_r )
+```
+
+A fibre cut and a signalling storm do not propagate at the same strength, and the published
+single-scalar operator cannot say so. Setting every coupling equal recovers it to floating-point
+equality, which [a test asserts](tests/test_ontology.py), so the published numbers cannot move.
+
+Experiment E7 in the paper is the payoff, and it overturned my own explanation of an earlier
+failure. Fitted on the true field, the per-relation regression recovers every coupling
+essentially exactly. A single scalar on the same clean data returns 0.0055 rather than an
+average, because with the memory term free, least squares prefers to abandon the coupling
+entirely than to average genuinely different ones.
+
+```bash
+make ontology     # the vocabulary and its couplings
+make e7           # identify them from unlabelled telemetry
+```
+
 ## Running it on real Intel silicon
 
 [`deploy/oberon/`](deploy/oberon/) deploys the whole thing as a single Kubernetes Job to a
@@ -161,6 +186,7 @@ src/gnn_healing/
 docs/math/        the monograph (LaTeX, PDF committed)
 docs/design/      TikZ architecture diagrams (source + PNG)
 docs/flatness/    "One Node": the read-off vs the trained GNN, experiments E1-E6
+docs/ontology/    the relation vocabulary and its couplings, in Turtle
 docs/nvidia.md    the accelerated path
 docs/state-and-coordination.md   deployment state, where Redis fits, known gaps
 deploy/oberon/    one Job to run all of this on Intel Xeon 6 with AMX, no GPU

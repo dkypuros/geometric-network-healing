@@ -1,0 +1,143 @@
+{
+  "ontology_truth": {
+    "link->router": 0.14,
+    "router(core)->router(agg)": 0.13,
+    "router(agg)->gnb": 0.12,
+    "router(core)->upf": 0.12,
+    "gnb->cell": 0.11,
+    "upf->service": 0.1,
+    "cell->service": 0.06,
+    "amf->gnb": 0.04,
+    "smf->upf": 0.04
+  },
+  "rho_true": 0.85,
+  "identified": {
+    "single": {
+      "rho": 0.8591219956312713,
+      "beta": 0.023943801333014186
+    },
+    "per_relation": {
+      "rho": 0.8594178026210084,
+      "beta_r": {
+        "link->router": 0.0981108699236277,
+        "router(core)->router(agg)": 0.10575863087663608,
+        "router(agg)->gnb": 0.07820766988256825,
+        "gnb->cell": 0.00018361585497461832,
+        "amf->gnb": 0.0,
+        "smf->upf": 0.0,
+        "router(core)->upf": 0.10012924421682881,
+        "upf->service": 0.007291056647859034,
+        "cell->service": 0.0
+      }
+    },
+    "grouped": {
+      "rho": 0.8598950996950944,
+      "beta_r": {
+        "link->router": 0.036820426491260085,
+        "router(core)->router(agg)": 0.036820426491260085,
+        "router(agg)->gnb": 0.036820426491260085,
+        "gnb->cell": 0.036820426491260085,
+        "amf->gnb": 0.0,
+        "smf->upf": 0.0,
+        "router(core)->upf": 0.036820426491260085,
+        "upf->service": 0.0,
+        "cell->service": 0.0
+      },
+      "by_group": {
+        "controls": 0.0,
+        "exposes": 0.0,
+        "feeds": 0.036820426491260085
+      },
+      "condition_number": 159.86380004882812
+    },
+    "per_relation_clean_field": {
+      "rho": 0.8500000238418579,
+      "beta_r": {
+        "link->router": 0.14000000059604645,
+        "router(core)->router(agg)": 0.12999999523162842,
+        "router(agg)->gnb": 0.11999999731779099,
+        "gnb->cell": 0.10999999940395355,
+        "amf->gnb": 0.03999999910593033,
+        "smf->upf": 2.0816681711721685e-17,
+        "router(core)->upf": 0.11999999731779099,
+        "upf->service": 0.10000000149011612,
+        "cell->service": 0.05999999865889549
+      }
+    }
+  },
+  "coupling_recovery": {
+    "single": {
+      "mae": 0.07161175422254137,
+      "max_abs_err": 0.11605619866698583,
+      "spread_recovered": 0.0
+    },
+    "per_relation": {
+      "mae": 0.05225765695527839,
+      "max_abs_err": 0.10981638414502538,
+      "spread_recovered": 0.10575863087663608,
+      "corr_with_truth": 0.7968668850167511,
+      "condition_number": 1485.1546630859375
+    },
+    "per_relation_clean_field": {
+      "mae": 0.004444446116685863,
+      "max_abs_err": 0.03999999999999998,
+      "spread_recovered": 0.14000000059604642,
+      "corr_with_truth": 0.9713180445738975
+    },
+    "grouped": {
+      "mae": 0.07509976306041108,
+      "max_abs_err": 0.10317957350873994,
+      "spread_recovered": 0.036820426491260085,
+      "corr_with_truth": 0.8701243882437936,
+      "condition_number": 159.86380004882812,
+      "by_group": {
+        "controls": 0.0,
+        "exposes": 0.0,
+        "feeds": 0.036820426491260085
+      }
+    },
+    "true_spread": 0.1
+  },
+  "scores": {
+    "assumed_single_0.13": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 23.875
+    },
+    "identified_single": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 24.15625
+    },
+    "identified_per_rel": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 24.15625
+    },
+    "identified_grouped": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 24.125
+    },
+    "per_rel_clean_field": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 23.8125
+    },
+    "oracle_ontology": {
+      "hit@1": 1.0,
+      "hit@3": 1.0,
+      "detection_rate": 1.0,
+      "delay": 23.8125
+    }
+  },
+  "n_test_faults": 32,
+  "n_train_episodes": 120,
+  "labels_used": 0,
+  "runtime_s": 9.3
+}

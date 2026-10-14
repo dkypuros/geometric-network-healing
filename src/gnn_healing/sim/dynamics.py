@@ -28,6 +28,12 @@ class PropagationParams:
     rho: float = 0.85        # memory of the degradation field
     beta: float = 0.13       # coupling; beta/(1-rho) = 0.87 < 1 so faults attenuate per hop
     degraded_threshold: float = 0.5  # d_v > this => node counted as degraded (labels)
+    # Per-relation coupling beta_r. None keeps the single-beta operator that the published
+    # results use. A dict, or from_ontology=True, makes a fibre cut and a signalling storm
+    # propagate at different strengths, which is physically right and which a single scalar
+    # cannot represent. See gnn_healing.operator and docs/ontology/network-healing.ttl.
+    beta_by_relation: dict | None = None
+    from_ontology: bool = False
 
 
 @dataclass
@@ -53,10 +59,11 @@ def simulate(twin: Twin, T: int, fault: "Fault | list[Fault] | None", rng: np.ra
              remediate_at: int | None = None) -> Episode:
     """Run T steps. If remediate_at is given, the injection is removed from that step on
     (the closed loop of Chapter 8 calls this to measure recovery)."""
+    from ..operator import build_operator
     N = twin.n
-    A = twin.adjacency()                                  # A[v,u]=1 iff v->u
-    indeg = np.maximum(A.sum(axis=0), 1.0)                # in-degree of effect nodes
-    P = (A / indeg).T                                     # P[u,v] = A[v,u]/indeg[u]  (D_in^-1 A^T)
+    # M = rho I + beta P, or rho I + sum_r beta_r P_r when per-relation coupling is on
+    M = build_operator(twin, prop.rho, beta=prop.beta,
+                       beta_by_relation=prop.beta_by_relation, from_ontology=prop.from_ontology)
     E = twin.effect_matrix()                              # [N, K]
     K = E.shape[1]
 
@@ -75,7 +82,7 @@ def simulate(twin: Twin, T: int, fault: "Fault | list[Fault] | None", rng: np.ra
         if remediate_at is None or t < remediate_at:
             for f in faults:
                 inj[f.origin] += f.injection(t)
-        d = prop.rho * d + prop.beta * (P @ d) + inj
+        d = M @ d + inj
         D[t] = d
         X[t] = n + d[:, None] * E
     ep = Episode(X=X, D=D, fault=faults[0] if faults else None, T=T)

@@ -20,44 +20,101 @@ from ..twin.generator import Twin
 from ..sim.dynamics import Episode, PropagationParams
 
 
-def propagation_matrix(twin: Twin) -> np.ndarray:
-    A = twin.adjacency()
-    indeg = np.maximum(A.sum(axis=0), 1.0)
-    return (A / indeg).T
+from ..operator import (propagation_matrix, relation_matrices, build_operator,
+                        design_matrix, design_matrix_grouped, stability, conditioning)
+from ..twin.schema import RELATIONS
+from .. import ontology
 
 
-def identify_operator(twin: Twin, episodes: list[Episode], iters: int = 20, delta: float = 0.1) -> tuple[float, float]:
-    """Identify (rho, beta) from UNLABELLED episodes: regress d~(t+1) on [d~(t), P d~(t)] with a Huber
-    loss (IRLS). The few (node, step) pairs carrying the source are outliers and get down-weighted;
-    no fault labels are used. Needs excitation (some faults present), not labels."""
-    P = propagation_matrix(twin)
-    E = twin.effect_matrix(); proj = E / np.maximum((E ** 2).sum(axis=1, keepdims=True), 1e-6)
-    xs, ys = [], []
-    for ep in episodes:
-        d = np.einsum("tnk,nk->tn", ep.X, proj)
-        d = np.maximum(d, 0.0)
-        xs.append(np.stack([d[:-1].ravel(), (d[:-1] @ P.T).ravel()], axis=1)); ys.append(d[1:].ravel())
-    X = np.concatenate(xs); y = np.concatenate(ys)
-    keep = X[:, 0] > 0.3                      # only steps with a visible field carry information about M
-    X, y = X[keep], y[keep]
+def _fit_huber(X: np.ndarray, y: np.ndarray, iters: int, delta: float) -> np.ndarray:
+    """IRLS Huber fit. The (node, step) pairs carrying the source are outliers to a model that
+    has no source term, so they get down-weighted automatically. That is what lets this run on
+    UNLABELLED data: it needs excitation, not labels saying where the faults were."""
+    k = X.shape[1]
     w = np.ones(len(y))
+    theta = np.zeros(k)
     for _ in range(iters):
         Xw = X * w[:, None]
-        theta, *_ = np.linalg.lstsq(Xw.T @ X + 1e-6 * np.eye(2), Xw.T @ y, rcond=None)
+        theta, *_ = np.linalg.lstsq(Xw.T @ X + 1e-6 * np.eye(k), Xw.T @ y, rcond=None)
         res = y - X @ theta
         scale = np.median(np.abs(res)) / 0.6745 + 1e-9
         w = np.minimum(1.0, delta * scale / np.maximum(np.abs(res), 1e-9))
+    return theta
+
+
+def _projected_fields(twin: Twin, episodes: list[Episode]) -> list[np.ndarray]:
+    E = twin.effect_matrix(); proj = E / np.maximum((E ** 2).sum(axis=1, keepdims=True), 1e-6)
+    return [np.maximum(np.einsum("tnk,nk->tn", ep.X, proj), 0.0) for ep in episodes]
+
+
+def identify_operator(twin: Twin, episodes: list[Episode], iters: int = 20,
+                      delta: float = 0.1) -> tuple[float, float]:
+    """Identify (rho, beta) from UNLABELLED episodes: regress d~(t+1) on [d~(t), P d~(t)]."""
+    Xs, ys = [], []
+    for d in _projected_fields(twin, episodes):
+        Xs.append(design_matrix(twin, d, per_relation=False)); ys.append(d[1:].ravel())
+    X, y = np.concatenate(Xs), np.concatenate(ys)
+    keep = X[:, 0] > 0.3                      # only steps with a visible field inform M
+    theta = _fit_huber(X[keep], y[keep], iters, delta)
     return float(np.clip(theta[0], 0.0, 0.999)), float(max(theta[1], 0.0))
+
+
+def identify_operator_grouped(twin: Twin, episodes: list[Episode], iters: int = 20,
+                              delta: float = 0.1) -> tuple[float, dict[str, float], dict]:
+    """Identify (rho, {beta_r}) with the relations TIED BY THE ONTOLOGY'S PROPERTY HIERARCHY:
+    one coefficient per superproperty (feeds, controls, exposes), broadcast back to the
+    relations underneath it.
+
+    Nine free coefficients are badly conditioned on a tree-shaped topology, because relations
+    along a chain always co-occur and the regression cannot separate them. Three are not. This
+    is the hierarchy earning its place: it is a regularisation structure, not a taxonomy."""
+    sup = ontology.superproperty_by_relation()
+    Xs, ys, groups = [], [], None
+    for d in _projected_fields(twin, episodes):
+        Xg, groups = design_matrix_grouped(twin, d)
+        Xs.append(Xg); ys.append(d[1:].ravel())
+    X, y = np.concatenate(Xs), np.concatenate(ys)
+    keep = X[:, 0] > 0.3
+    Xk = X[keep]
+    theta = _fit_huber(Xk, y[keep], iters, delta)
+    rho = float(np.clip(theta[0], 0.0, 0.999))
+    by_group = {g: float(max(theta[1 + i], 0.0)) for i, g in enumerate(groups)}
+    betas = {r.value: by_group.get(sup.get(r.value, ""), 0.0) for r in RELATIONS}
+    return rho, betas, {"by_group": by_group, "condition_number": conditioning(Xk)}
+
+
+def identify_operator_per_relation(twin: Twin, episodes: list[Episode], iters: int = 20,
+                                   delta: float = 0.1) -> tuple[float, dict[str, float]]:
+    """Identify (rho, {beta_r}) from UNLABELLED episodes. Same regression, one column per
+    relation instead of one for the aggregate. This is the thing a single scalar cannot do:
+    recover that transport couples several times more strongly than the control plane."""
+    Xs, ys = [], []
+    for d in _projected_fields(twin, episodes):
+        Xs.append(design_matrix(twin, d, per_relation=True)); ys.append(d[1:].ravel())
+    X, y = np.concatenate(Xs), np.concatenate(ys)
+    keep = X[:, 0] > 0.3
+    Xk = X[keep]
+    theta = _fit_huber(Xk, y[keep], iters, delta)
+    rho = float(np.clip(theta[0], 0.0, 0.999))
+    betas = {r.value: float(max(theta[1 + i], 0.0)) for i, r in enumerate(RELATIONS)}
+    identify_operator_per_relation.last_condition_number = conditioning(Xk)
+    return rho, betas
 
 
 class FlatnessSolver:
     def __init__(self, twin: Twin, prop: PropagationParams = PropagationParams(),
-                 q: float = 0.05, r: float = 0.08, window: int = 16, rho: float | None = None, beta: float | None = None):
-        P = propagation_matrix(twin)
+                 q: float = 0.05, r: float = 0.08, window: int = 16,
+                 rho: float | None = None, beta: float | None = None,
+                 beta_by_relation: dict[str, float] | None = None, from_ontology: bool = False):
         self.N = twin.n
-        rho = prop.rho if rho is None else rho; beta = prop.beta if beta is None else beta
-        self.rho, self.beta = rho, beta
-        self.M = rho * np.eye(self.N, dtype=np.float32) + beta * P      # propagation operator
+        rho = prop.rho if rho is None else rho
+        beta = prop.beta if beta is None else beta
+        if beta_by_relation is None and from_ontology:
+            beta_by_relation = ontology.coupling_by_relation()
+        if beta_by_relation is None and prop.beta_by_relation is not None:
+            beta_by_relation = prop.beta_by_relation
+        self.rho, self.beta, self.beta_by_relation = rho, beta, beta_by_relation
+        self.M = build_operator(twin, rho, beta=beta, beta_by_relation=beta_by_relation)
         E = twin.effect_matrix()                                                  # [N, K]
         self.proj = E / np.maximum((E ** 2).sum(axis=1, keepdims=True), 1e-6)    # x -> d along e_tau
         self.q, self.r, self.window = q, r, window
