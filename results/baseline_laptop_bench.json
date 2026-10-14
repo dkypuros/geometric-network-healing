@@ -1,0 +1,93 @@
+{
+  "started": "2026-10-14T18:26:37",
+  "quick": true,
+  "environment": {
+    "platform": "macOS-15.5-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.12.12",
+    "torch": "2.14.1",
+    "numpy": "2.5.3",
+    "logical_cores": 8,
+    "host_cpu_count": 8,
+    "torch_num_threads": 4,
+    "env": {
+      "OMP_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "KMP_AFFINITY": null,
+      "KMP_BLOCKTIME": null
+    },
+    "cuda_available": false,
+    "xpu_available": false,
+    "cpu_model": "arm",
+    "cpu_flags": "unavailable",
+    "amx": false,
+    "torch_blas": "- Build settings: BLAS_INFO=accelerate, BUILD_TYPE=Release, COMMIT_SHA=5c4886908584029761b579af026dcfb627c84070, CUDA_FLAGS= -DLIBCUDACXX_ENABLE_SIMPLIFIED_COMP",
+    "torch_has_mkl": false,
+    "torch_has_mkldnn": false,
+    "intel_extension_for_pytorch": null
+  },
+  "model_parameters": 241222,
+  "thread_scaling": [
+    {
+      "threads": 1,
+      "solver_us_per_step": 75.3,
+      "gnn_fp32_us": 3153.6,
+      "gnn_bf16_us": 6798.1
+    },
+    {
+      "threads": 2,
+      "solver_us_per_step": 74.8,
+      "gnn_fp32_us": 6182.1,
+      "gnn_bf16_us": 10313.3
+    },
+    {
+      "threads": 4,
+      "solver_us_per_step": 75.8,
+      "gnn_fp32_us": 8744.7,
+      "gnn_bf16_us": 13595.7
+    },
+    {
+      "threads": 8,
+      "solver_us_per_step": 88.9,
+      "gnn_fp32_us": 15457.7,
+      "gnn_bf16_us": 19630.8
+    }
+  ],
+  "size_scaling": [
+    {
+      "nodes": 74,
+      "edges": 130,
+      "dense_covariance_gb": 0.0,
+      "solver_us_per_step": 81.7,
+      "gnn_us": 10197.2
+    },
+    {
+      "nodes": 220,
+      "edges": 456,
+      "dense_covariance_gb": 0.0002,
+      "solver_us_per_step": 1111.7,
+      "gnn_us": 9508.8
+    }
+  ],
+  "reproducibility": {
+    "reference_present": true,
+    "reference": {
+      "hit@1": 1.0,
+      "hit@1_flatness": 1.0,
+      "delay_gnn": 22.875,
+      "theta": 1.1392592191696167,
+      "twin_nodes": 74
+    },
+    "recomputed": {
+      "twin_nodes": 74,
+      "twin_edges": 130,
+      "operator_spectral_radius": 0.8500000238,
+      "field_max": 4.23620272,
+      "field_sum": 1853.262085,
+      "argmax_node": 66,
+      "true_origin": 66
+    },
+    "twin_matches_reference": true
+  },
+  "runtime_s": 3.6
+}

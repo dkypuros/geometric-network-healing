@@ -126,6 +126,26 @@ them. The sharpest one: the change-risk concurrency policy in
 [`select_order()`](src/gnn_healing/intent/biem.py#L53) uses a per-process set, which is correct for
 the single-loop experiment here and breaks the moment two sites heal at once.
 
+## Running it on real Intel silicon
+
+[`deploy/oberon/`](deploy/oberon/) deploys the whole thing as a single Kubernetes Job to a
+bare-metal Single Node OpenShift cluster with an Intel Xeon 6 (Granite Rapids), 256 vCPU,
+503 GiB and AMX matrix extensions, and **no GPU**. That is the configuration this method is
+argued to suit, so it is the one worth measuring on.
+
+```bash
+oc login https://api.oberon.fm2aihpcsed.com:6443 -u <user> \
+    --certificate-authority=$HOME/.kube/oberon-combined-ca.crt
+./deploy/oberon/run.sh
+```
+
+It installs nothing into the cluster beyond that one Job, and
+[`scripts/oberon_bench.py`](scripts/oberon_bench.py) runs anywhere, not just there:
+thread scaling, bfloat16 against float32 to see whether AMX engages, size scaling until the
+dense covariance becomes the wall, and a check that the published numbers reproduce on
+different silicon. Predictions are written down in the
+[deploy README](deploy/oberon/README.md) before the run so the result can contradict them.
+
 ## Layout
 
 ```
@@ -143,6 +163,8 @@ docs/design/      TikZ architecture diagrams (source + PNG)
 docs/flatness/    "One Node": the read-off vs the trained GNN, experiments E1-E6
 docs/nvidia.md    the accelerated path
 docs/state-and-coordination.md   deployment state, where Redis fits, known gaps
+deploy/oberon/    one Job to run all of this on Intel Xeon 6 with AMX, no GPU
+scripts/          oberon_bench.py, flatness_experiments.py, results renderers
 docs/industry-comparison.md   how this relates to a 2026 TM Forum Catalyst of the same shape
 tests/            twin invariants, propagation stability, model equivariance, intent ordering
 ```

@@ -23,3 +23,12 @@ docs/math/main.pdf
 docs/flatness/*.aux
 docs/flatness/*.log
 docs/flatness/*.out
+
+# Oberon / cluster deployment: never commit credentials or fetched results
+.env
+.env.local
+deploy/oberon/.env
+deploy/oberon/*-ca.crt
+deploy/oberon/kubeconfig*
+deploy/oberon/results/
+*.kubeconfig

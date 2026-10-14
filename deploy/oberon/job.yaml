@@ -1,0 +1,88 @@
+# Benchmark the healing stack on Oberon: bare-metal Single Node OpenShift,
+# Intel Xeon 6 (Granite Rapids), AMX, no GPU.
+#
+# Deliberately self-contained: clones the public repo, installs CPU-only PyTorch,
+# runs scripts/oberon_bench.py and the pipeline, prints everything to stdout.
+# Nothing is installed into the cluster and no existing service is touched.
+#
+# Written for the OpenShift `restricted-v2` SCC: no fixed runAsUser, no privilege,
+# every writable path is an emptyDir.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gnn-healing-bench
+  labels:
+    app.kubernetes.io/name: gnn-healing
+    app.kubernetes.io/component: benchmark
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 5400          # 90 min hard stop; nothing lingers
+  ttlSecondsAfterFinished: 86400       # pod kept a day so logs are retrievable
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gnn-healing
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: bench
+          image: registry.access.redhat.com/ubi9/python-312:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          env:
+            - name: HOME
+              value: /work
+            - name: PIP_CACHE_DIR
+              value: /work/.cache/pip
+            - name: XDG_CACHE_HOME
+              value: /work/.cache
+            - name: GIT_REF
+              value: master
+            - name: REPO
+              value: https://github.com/dkypuros/geometric-network-healing
+            # the bench sets thread counts itself; keep the library defaults out of the way
+            - name: OMP_NUM_THREADS
+              value: "1"
+            - name: MKL_NUM_THREADS
+              value: "1"
+          resources:
+            requests: { cpu: "8",  memory: 16Gi }
+            limits:   { cpu: "64", memory: 64Gi }   # 64 so the thread ladder can reach 64
+          volumeMounts:
+            - { name: work, mountPath: /work }
+          command: ["/bin/bash", "-euo", "pipefail", "-c"]
+          args:
+            - |
+              echo "=============== preflight ==============="
+              id; echo "writable HOME: $HOME"
+              echo "cgroup cpus: $(python3 -c 'import os;print(len(os.sched_getaffinity(0)))')"
+              grep -m1 'model name' /proc/cpuinfo || true
+              echo -n "amx flags: "; grep -m1 -o 'amx[a-z_]*' /proc/cpuinfo | tr '\n' ' '; echo
+              echo "=============== fetch ==============="
+              cd /work
+              git clone --depth 1 --branch "$GIT_REF" "$REPO" repo
+              cd repo && git log --oneline -1
+              echo "=============== install ==============="
+              python3 -m venv /work/venv
+              . /work/venv/bin/activate
+              pip install --quiet --upgrade pip
+              # CPU-only wheels: no CUDA payload on a GPU-less box
+              pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+              pip install --quiet torch-geometric numpy pandas networkx pyyaml tqdm matplotlib
+              pip install --quiet --no-deps -e .
+              python3 -c "import torch,torch_geometric;print('torch',torch.__version__,'pyg',torch_geometric.__version__)"
+              echo "=============== benchmark ==============="
+              python3 scripts/oberon_bench.py
+              echo "=============== pipeline (same seed as the published run) ==============="
+              python3 -m gnn_healing.cli pipeline --episodes 160 --epochs 30 --out results
+              echo "=============== results/results.md ==============="
+              cat results/results.md
+              echo "=============== done ==============="
+      volumes:
+        - name: work
+          emptyDir: { sizeLimit: 20Gi }
