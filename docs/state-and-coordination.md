@@ -182,6 +182,38 @@ if you do rely on Redis here.
 
 ---
 
+## What is actually on the cluster, checked rather than assumed
+
+Oberon runs three Redis instances today. Checking them changed this note's argument, so the
+findings are recorded here rather than left as theory.
+
+| where | what it is | usable for the filter checkpoint? |
+|---|---|---|
+| `argocd/argocd-redis` | ArgoCD's internal cache | no, platform internal, never touch |
+| `quay-enterprise/quay-quay-redis` | Quay's internal cache | no, platform internal, never touch |
+| `confidential-agents/redis` | shared cache for an ephemeral agent sandbox | **no, and the reason matters** |
+
+The third one looked promising: a general-purpose Redis 7, sitting beside MLflow and a
+confidential-computing agent pool. It is started with `--save '' --appendonly no` and mounts no
+volume. That is persistence explicitly disabled, both snapshotting and append-only file, and the
+pod has already restarted three times in sixty-one days.
+
+So the one non-platform Redis on this cluster is a deliberately ephemeral cache. It cannot serve
+the single use case this note argues Redis is for, which is keeping a recursive filter's state
+alive across a restart so that detection lead time is not lost. **A cache with persistence turned
+off cannot checkpoint anything across its own restart.** It is correctly configured for what it
+does, which is coordinating short-lived agents that can afford to lose state; it is simply not
+the same job.
+
+Its network policy also scopes egress to pods labelled `app=ephemeral-agent` inside that
+namespace, so reaching it from elsewhere would mean editing someone else's policy.
+
+Two conclusions. If the filter checkpoint is ever built here, it needs its own Redis with
+append-only persistence enabled, in its own namespace, and sized from a banded covariance rather
+than the dense one. And for benchmark results there is already an answer that needs nothing new:
+the MLflow service in that same namespace, which the lab's other repositories already use for
+tracing.
+
 ## What stays out
 
 - **The twin.** It needs history and versioning. See [`docs/nvidia.md`](nvidia.md).
