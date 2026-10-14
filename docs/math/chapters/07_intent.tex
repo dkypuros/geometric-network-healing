@@ -47,6 +47,16 @@ change it. The output is serialised as an intent object whose targets
 carry domain, action, priority, revenue at risk and resource units, in the shape of a TMF921
 intent with a business-priority extension.
 
+\begin{remark}[The concurrency policy is per-process here]
+The one-change-per-domain rule in \eqref{eq:selection} is enforced inside a single selection call,
+which is correct for the single-loop experiments of Chapter~\ref{ch:experiments} and insufficient
+in deployment: several sites healing concurrently each run their own selection and none of them
+sees the others. The policy then needs a distributed lock per domain with an expiry, backed by an
+authoritative concurrency gate in the orchestrator, since an advisory lock alone can admit exactly
+the two simultaneous changes the rule forbids. This gap and the state it implies are recorded in
+\code{docs/state-and-coordination.md}.
+\end{remark}
+
 \begin{remark}[What the business layer does not do]
 It does not move the root-cause ranking. If the model is wrong about the origin, revenue
 weighting makes the wrong remediation run first with more conviction. The guard against that is

@@ -113,6 +113,19 @@ On a CUDA 12 Linux host, `make setup-nvidia` adds the RAPIDS stack (cuGraph-PyG,
 cuDF). See [docs/nvidia.md](docs/nvidia.md) for what each piece replaces and an honest note on
 what is and is not tested here.
 
+## Deployment, state and coordination
+
+The repo runs as one process with everything in memory, on purpose. What changes when the same
+method runs as a service across many sites is written up in
+**[docs/state-and-coordination.md](docs/state-and-coordination.md)**: which state must survive a
+restart, which must be shared between concurrent healers, where Redis belongs and where it does
+not, and the two-tier split between edge sites and the metro hub.
+
+It also records four known gaps with links to the exact code, so a reviewer does not have to find
+them. The sharpest one: the change-risk concurrency policy in
+[`select_order()`](src/gnn_healing/intent/biem.py#L53) uses a per-process set, which is correct for
+the single-loop experiment here and breaks the moment two sites heal at once.
+
 ## Layout
 
 ```
@@ -127,7 +140,9 @@ src/gnn_healing/
   cli.py                 gnn-healing pipeline | twin | backend
 docs/math/        the monograph (LaTeX, PDF committed)
 docs/design/      TikZ architecture diagrams (source + PNG)
+docs/flatness/    "One Node": the read-off vs the trained GNN, experiments E1-E6
 docs/nvidia.md    the accelerated path
+docs/state-and-coordination.md   deployment state, where Redis fits, known gaps
 docs/industry-comparison.md   how this relates to a 2026 TM Forum Catalyst of the same shape
 tests/            twin invariants, propagation stability, model equivariance, intent ordering
 ```
