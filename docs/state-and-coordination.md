@@ -66,8 +66,13 @@ build a clever every-N-steps scheme; it buys nothing and costs you warm-up on re
 | 74 (this repo's twin) | 300 B | 22 KB |
 | 100,000 (regional) | 400 KB | 40 GB |
 
-A regional deployment needs a banded, low-rank, or information-form covariance regardless of
-whether Redis is involved. Once it has one, the per-site checkpoint is kilobytes. **The
+**Partly resolved.** The time cost, which was always the sharper half of this problem, is fixed
+by `steady_state=True`: the system is time-invariant, so the gain is solved once and each step
+becomes two matrix-vector products, 240x faster at 1,222 nodes. What a checkpoint must carry then
+is the field and the precomputed gain, and the gain is static, so only the field is hot state.
+
+A regional deployment at six figures of nodes still needs a banded, low-rank, or information-form
+covariance regardless of whether Redis is involved. Once it has one, the per-site checkpoint is kilobytes. **The
 checkpointing question and the scaling question are the same question, and neither is answered in
 this repo today.**
 

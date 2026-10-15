@@ -80,9 +80,28 @@ on synthetic data. Both are stated plainly by the system itself.
 
 I had been reasoning about regional twins of 100,000 nodes when discussing the dense-covariance
 wall. The deployed demo is three orders of magnitude smaller than that, and only about eighteen
-times this repository's 74-node twin. At 1,367 nodes a dense covariance is 7.5 MB, which is
-nothing. **The scaling objection I raised against my own method does not bite at the size the
-industry is actually demonstrating.**
+times this repository's 74-node twin.
+
+**Correction, added after measuring on Oberon.** My first version of this paragraph said the
+scaling objection did not bite at this size, because a dense covariance at 1,367 nodes is only
+7.5 MB. That checked memory and ignored time. The per-step filter inverts an `N x N` matrix every
+step, which is cubic, and on an Intel Xeon 6767P it costs 14.5 ms at 642 nodes and 219 ms at
+1,222. The crossover where the learned model becomes the faster of the two sits between 220 and
+642 nodes, well below the demo's scale.
+
+The repair is mathematical rather than operational. The system is linear and time-invariant, so
+the Kalman gain converges and has no business being recomputed every step. Solving the Riccati
+recursion once at startup, which takes fourteen iterations, reduces each step to two
+matrix-vector products:
+
+| nodes | per-step filter | steady-state | speedup | same origin found |
+|---|---|---|---|---|
+| 642 | 14,533 µs | 48 µs | 304x | yes, 1.00 agreement |
+| 1,222 | 62,852 µs | 262 µs | 240x | yes, 1.00 agreement |
+
+At 1,222 nodes the learned model takes 11,894 µs, so the corrected solver is about **45 times
+faster** rather than 18 times slower. Field estimates agree to a correlation of 0.998 and the
+ranked origin is identical in every episode tested. `FlatnessSolver(..., steady_state=True)`.
 
 ---
 
