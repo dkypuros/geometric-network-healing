@@ -82,6 +82,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers(); self.wfile.write(body); return
             if self.path.startswith("/v1/demo"):
                 return self._demo()
+            if self.path.startswith("/v1/story"):
+                return self._story()
             if self.path == "/healthz":
                 return self._send(200, {"status": "ok"})
             if self.path == "/readyz":
@@ -130,6 +132,71 @@ class Handler(BaseHTTPRequestHandler):
             "n_nodes": topo.n, "steps": int(X.shape[0]),
             "us_per_step": round(el * 1e6 / X.shape[0], 1),
             "residual": [float(x) for x in f.residual],
+            "top": [{"node": topo.name(i), "value": float(x)} for i, x in f.ranked[:8]],
+            "intent": healing_intent(topo, f),
+        })
+
+    def _story(self):
+        """The same incident at three stages, over time, so the reveal has something to reveal
+        against: what the counters show, what the field shows, what the operator leaves behind.
+        Panels are quantised to bytes because 781 x 120 floats three times over is 3 MB of JSON
+        and 280 KB of uint8."""
+        import base64
+        from urllib.parse import urlparse, parse_qs
+        from .simulate import inject
+        eng, topo = STATE["engine"], STATE["topology"]
+        if eng is None:
+            return self._send(503, {"error": "no topology loaded"})
+        q = parse_qs(urlparse(self.path).query)
+        kind = (q.get("kind") or ["agg"])[0]
+        cand = [i for i, n in enumerate(topo.nodes) if n["type"] == kind] or [0]
+        v = int(np.random.default_rng().choice(cand))
+        steps, onset, ramp = 140, 50, 35
+        X, injn = inject(topo, eng.M, steps=steps, origin=v, onset=onset, ramp=ramp,
+                         severity=0.5, seed=int(time.time()) % 100000)
+
+        t0 = time.perf_counter()
+        d = eng.field(X)
+        s_resid = eng.residual(d)
+        f = eng.locate(X)
+        elapsed = time.perf_counter() - t0
+
+        # what a static threshold on the raw counters would have done, for contrast
+        proj = np.einsum("tnk,nk->tn", X, eng.proj)
+        thr = 3.0
+        over = np.abs(proj) > thr
+        run = np.zeros(topo.n, dtype=int); alarm = None
+        for t in range(steps):
+            run = np.where(over[t], run + 1, 0)
+            if (run >= 3).any():
+                alarm = t; break
+        # when does the operator resolve the origin
+        resolved = None
+        for t in range(2, steps):
+            w = s_resid[max(1, t - eng.window + 1): t + 1].sum(axis=0)
+            if int(np.argmax(w)) == v and w[v] > 3.0 * np.median(w):
+                resolved = t; break
+
+        def panel(A: np.ndarray) -> str:
+            a = np.abs(A)
+            hi = np.percentile(a, 99.5) or 1.0
+            return base64.b64encode(
+                np.clip(a / hi * 255.0, 0, 255).astype(np.uint8).tobytes()).decode()
+
+        return self._send(200, {
+            "steps": steps, "n_nodes": topo.n,
+            "origin_index": f.origin_index, "injected": topo.name(v), "found": f.origin_name,
+            "origin_type": topo.nodes[v]["type"], "domain": topo.nodes[v].get("domain", ""),
+            "onset": onset, "ramp": ramp,
+            "threshold_alarm_step": alarm, "operator_resolved_step": resolved,
+            "lead_steps": (alarm - resolved) if (alarm is not None and resolved is not None) else None,
+            "confidence": f.confidence, "separation_z": f.separation_z,
+            "blast_radius": len(f.blast_radius),
+            "revenue_at_risk": round(sum(float(topo.nodes[i].get("revenue", 0.0))
+                                         for i in f.blast_radius + [f.origin_index]), 2),
+            "us_per_step": round(elapsed * 1e6 / steps, 1),
+            "panels": {"counters": panel(proj), "field": panel(d), "residual": panel(s_resid)},
+            "final_residual": [float(x) for x in f.residual],
             "top": [{"node": topo.name(i), "value": float(x)} for i, x in f.ranked[:8]],
             "intent": healing_intent(topo, f),
         })
