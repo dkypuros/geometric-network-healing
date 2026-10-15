@@ -165,6 +165,20 @@ make ontology     # the vocabulary and its couplings
 make e7           # identify them from unlabelled telemetry
 ```
 
+## What the deployed industry system actually does
+
+[`docs/what-the-demo-shows.md`](docs/what-the-demo-shows.md) reads the award-winning Catalyst
+system off its own running UI rather than off its slides, and corrects my earlier write-up in
+three places. The graph model does anomaly detection and reports `Primary origin: unknown`; root
+cause comes from a separate agent running thirteen tools including z-scores and a topology walk.
+The deployed twin is 1,367 nodes, not operator scale. And in the recorded run the business
+ranking showed placeholder values while the orchestration engine was mocked, both disclosed by
+the system itself.
+
+It also compares the two ontologies, and that comparison is the most useful thing on the page.
+Their business vocabulary and ours describe different layers: theirs says which fault to heal
+first, ours says how a fault spreads. Theirs has no coupling term at all.
+
 ## Running it on real Intel silicon
 
 [`deploy/oberon/`](deploy/oberon/) deploys the whole thing as a single Kubernetes Job to a
@@ -197,6 +211,7 @@ src/gnn_healing/
   orchestration/  Ch. 8  TMF641-shaped orders, mock orchestrator, closed loop, re-trigger
   evaluation/     Ch. 9  lead time, hit@k, triage reduction, exposure
   cli.py                 gnn-healing pipeline | twin | backend
+docs/what-the-demo-shows.md   the deployed industry system, read off its own UI
 docs/the-method.md   the method in one page: proven, measured, and still open
 docs/math/        the monograph (LaTeX, PDF committed)
 docs/design/      TikZ architecture diagrams (source + PNG)

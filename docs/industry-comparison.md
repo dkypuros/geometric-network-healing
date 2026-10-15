@@ -1,5 +1,12 @@
 # How this relates to the industry design
 
+> **Superseded in part.** This page was written from published slides and an article. Since then
+> I watched two recordings of the running booth demo, which corrects three claims below, most
+> importantly that root cause is *not* link prediction but a 13-tool agentic loop, and that the
+> deployed twin is 1,367 nodes rather than operator scale. Read
+> **[what-the-demo-shows.md](what-the-demo-shows.md)** alongside this.
+
+
 A 2026 TM Forum Moonshot Catalyst on business-aware GNN healing (C26.0.965) describes a
 production system of the same shape: a service-layer trigger, a GNN over a temporal digital twin
 for cross-domain root cause, a business-intent layer that reorders remediation by revenue, and
