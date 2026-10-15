@@ -111,6 +111,23 @@ Twin: 74 nodes, 130 edges. Fault episodes: 32, nominal: 8. Runtime 647.1 s.
 *(CPU, fixed seed; regenerate with `make pipeline`.)*
 <!-- RESULTS:END -->
 
+## First contact with real telemetry
+
+[`experiments/oberon_live/`](experiments/oberon_live/) is the first test against data nobody
+generated for the purpose: a live five-plane 5G stack, real Thanos telemetry, a real injected
+fault. **The method found nothing, and nothing was there to find.** The O-RU, O-CU and AMF in
+that stack transmit zero bytes; they are placeholders sharing one container image, so no
+degradation can propagate between them. Strong lagged correlation appears on 0.0% of the
+modelled edges.
+
+The method reported no clear origin, which is correct, and that is the first evidence its null
+case is honest on data not constructed here.
+
+The experiment produced a tool worth more than the result:
+[`precondition.py`](experiments/oberon_live/precondition.py) tests whether a network satisfies
+the method's assumption at all, from healthy telemetry alone, before anything is deployed.
+It passes the synthetic control at 2.5x lift and fails the live stack at p = 1.0.
+
 ## The full record
 
 [`docs/build-log.md`](docs/build-log.md) is the audit trail: every experiment with its numbers,
@@ -239,6 +256,7 @@ src/gnn_healing/
   evaluation/     Ch. 9  lead time, hit@k, triage reduction, exposure
   cli.py                 gnn-healing pipeline | twin | backend
 docs/what-the-demo-shows.md   the deployed industry system, read off its own UI
+experiments/oberon_live/   first contact with real telemetry, and the precondition check
 docs/build-log.md the full record: every measurement, every defect found, everything open
 docs/the-method.md   the method in one page: proven, measured, and still open
 docs/math/        the monograph (LaTeX, PDF committed)

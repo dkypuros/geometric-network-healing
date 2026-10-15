@@ -191,6 +191,43 @@ prediction before the run was the opposite, and it is recorded as having failed.
 
 **Reproducibility.** The pipeline returned identical published numbers on different silicon.
 
+### E9. First contact with real telemetry — **the method found nothing, and nothing was there**
+
+A live five-plane 5G stack on the cluster: 28-pod core, O-RAN split RAN, SMO, BSS/OSS, 47 pods.
+Topology built from 3GPP and O-RAN relations. Real per-pod CPU, memory and network pulled from
+Thanos at 30-second resolution, 99% coverage. A graceful `rollout restart` of the O-DU as the
+injected fault.
+
+| | healthy real window | injected window | synthetic fault |
+|---|---|---|---|
+| margin over runner-up | 0.106 | 0.057 | 0.767 |
+| robust z | 5.4 | 3.6 | 15 to 19 |
+| rank of the true origin | n/a | **13 of 47** | 1 |
+
+The cause was established, not assumed. The O-RU, O-CU-CP, O-CU-UP and AMF all transmit
+**zero bytes per second**: they are placeholder containers sharing one generic image, not
+functions passing traffic. The largest counter movement anywhere was 31%, against the 7,327%
+the industry demo used to localise its own fault. Strong lagged correlation appears on 0.0% of
+modelled edges and 0.5% of random pairs.
+
+The operator was fiction. The relations are real in 3GPP and absent in these containers. The
+method was handed data with no propagation and reported no propagation, which is the correct
+null behaviour and the first evidence of it on data not constructed here.
+
+**The experiment produced a tool.** `experiments/oberon_live/precondition.py` tests the
+precondition on healthy telemetry alone: does a cause predict its effects one step later more
+often than an unrelated pair? Control 9.8% of edges against 3.9% of random pairs, lift 2.5x,
+p = 0.0000, PASS. Live stack 0.0% against 0.5%, p = 1.0000, FAIL.
+
+Two earlier versions of that check were wrong and both failed their own control. Zero-lag
+correlation on raw counters is dominated by shared diurnal shape. The *mean* lagged correlation
+scores 1.11x where propagation is true against 1.03x where it is absent, because most pairs are
+quiet most of the time. Only the tail separates them. The check also shows that forward and
+reversed edges score identically even in the control, so direction comes from the operator's
+structure and not from any asymmetry in the raw statistics.
+
+Full write-up: `experiments/oberon_live/README.md`.
+
 ---
 
 ## 4. Defects found and what was done
@@ -313,7 +350,8 @@ dropped, read-only root filesystem.
 
 | gap | state |
 |---|---|
-| **no real telemetry** | every number here comes from a simulator written for this repository |
+| **still no real test** | the method has met real telemetry once, on a stack carrying no traffic, where its precondition provably fails; every *positive* number here remains synthetic |
+| the precondition must be checked first | `precondition.py` answers it on healthy data alone, and should gate any deployment |
 | hit@1 saturates at 1.00 | the twins are too easy to discriminate between methods |
 | the linear assumption | real propagation has knees; a nonlinear ground truth has never been tested |
 | the doubt statistic | fails, unrepaired |

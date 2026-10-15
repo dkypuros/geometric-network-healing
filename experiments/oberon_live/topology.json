@@ -1,0 +1,751 @@
+{
+ "rho": 0.85,
+ "kpi_names": [
+  "cpu_rate",
+  "memory_working_set",
+  "net_rx_rate",
+  "net_tx_rate"
+ ],
+ "coupling": {
+  "fronthaul_feeds": 0.14,
+  "f1u_feeds": 0.13,
+  "f1c_feeds": 0.11,
+  "n3_feeds": 0.12,
+  "n2_signals": 0.08,
+  "e2_controls": 0.04,
+  "n4_controls": 0.12,
+  "discovery_serves": 0.05,
+  "proxies": 0.05,
+  "repository_serves": 0.07,
+  "subscriber_serves": 0.06,
+  "authenticates": 0.06,
+  "session_triggers": 0.07,
+  "policy_governs": 0.05,
+  "charging_governs": 0.04,
+  "slice_selects": 0.04,
+  "state_serves": 0.05,
+  "equipment_checks": 0.03,
+  "binding_serves": 0.04,
+  "routes": 0.08,
+  "media_serves": 0.05,
+  "exposes": 0.04,
+  "analytics_informs": 0.03,
+  "location_requests": 0.04,
+  "roaming_serves": 0.03,
+  "untrusted_access": 0.04,
+  "tsc_governs": 0.03,
+  "slice_auth": 0.03,
+  "hosts": 0.06,
+  "timing_feeds": 0.09,
+  "manages": 0.03,
+  "r1_serves": 0.03,
+  "inventory_serves": 0.05,
+  "events_feed": 0.05,
+  "gateway_serves": 0.07,
+  "billing_serves": 0.05,
+  "evidence_feeds": 0.04,
+  "serves": 0.08
+ },
+ "effect": {
+  "user_plane": [
+   0.9,
+   0.5,
+   -0.8,
+   -0.8
+  ],
+  "control": [
+   0.9,
+   0.7,
+   -0.3,
+   -0.3
+  ],
+  "transport": [
+   0.7,
+   0.4,
+   -0.9,
+   -0.9
+  ]
+ },
+ "nodes": [
+  {
+   "id": 0,
+   "name": "telco-ran/nearrt-ric-55dbbccb84-n2662",
+   "type": "control",
+   "domain": "telco-ran",
+   "function": "nearrt-ric",
+   "pod": "nearrt-ric-55dbbccb84-n2662",
+   "namespace": "telco-ran"
+  },
+  {
+   "id": 1,
+   "name": "telco-ran/ocucp-9cfd65f96-dfzcx",
+   "type": "control",
+   "domain": "telco-ran",
+   "function": "ocucp",
+   "pod": "ocucp-9cfd65f96-dfzcx",
+   "namespace": "telco-ran"
+  },
+  {
+   "id": 2,
+   "name": "telco-ran/ocuup-7b785b9866-95drg",
+   "type": "user_plane",
+   "domain": "telco-ran",
+   "function": "ocuup",
+   "pod": "ocuup-7b785b9866-95drg",
+   "namespace": "telco-ran"
+  },
+  {
+   "id": 3,
+   "name": "telco-ran/odu-5dcbb57896-bxs6p",
+   "type": "user_plane",
+   "domain": "telco-ran",
+   "function": "odu",
+   "pod": "odu-5dcbb57896-bxs6p",
+   "namespace": "telco-ran"
+  },
+  {
+   "id": 4,
+   "name": "telco-ran/oru-58fd57c44-d9ppn",
+   "type": "user_plane",
+   "domain": "telco-ran",
+   "function": "oru",
+   "pod": "oru-58fd57c44-d9ppn",
+   "namespace": "telco-ran"
+  },
+  {
+   "id": 5,
+   "name": "telco-ran/ran-sandbox-controller-5c9b95c644-hfdzp",
+   "type": "control",
+   "domain": "telco-ran",
+   "function": "ran-sandbox-controller",
+   "pod": "ran-sandbox-controller-5c9b95c644-hfdzp",
+   "namespace": "telco-ran"
+  },
+  {
+   "id": 6,
+   "name": "telco-core/amf-86bcbbbd84-tfmq4",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "amf",
+   "pod": "amf-86bcbbbd84-tfmq4",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 7,
+   "name": "telco-core/ausf-85d9c66456-n2znk",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "ausf",
+   "pod": "ausf-85d9c66456-n2znk",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 8,
+   "name": "telco-core/bsf-548d5f64f-mmprm",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "bsf",
+   "pod": "bsf-548d5f64f-mmprm",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 9,
+   "name": "telco-core/capif-7f6cdf77c5-mjl2p",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "capif",
+   "pod": "capif-7f6cdf77c5-mjl2p",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 10,
+   "name": "telco-core/chf-6cc845ccf-zc6r4",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "chf",
+   "pod": "chf-6cc845ccf-zc6r4",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 11,
+   "name": "telco-core/eir-5c4b879578-zjwzj",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "eir",
+   "pod": "eir-5c4b879578-zjwzj",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 12,
+   "name": "telco-core/gmlc-8bb667d97-kw7zc",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "gmlc",
+   "pod": "gmlc-8bb667d97-kw7zc",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 13,
+   "name": "telco-core/icscf-847765f6cf-tpbbq",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "icscf",
+   "pod": "icscf-847765f6cf-tpbbq",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 14,
+   "name": "telco-core/ims-hss-85b4cd97-hsspf",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "ims-hss",
+   "pod": "ims-hss-85b4cd97-hsspf",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 15,
+   "name": "telco-core/lmf-6f56b56b9b-865vv",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "lmf",
+   "pod": "lmf-6f56b56b9b-865vv",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 16,
+   "name": "telco-core/mrf-5974d8fb96-5thks",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "mrf",
+   "pod": "mrf-5974d8fb96-5thks",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 17,
+   "name": "telco-core/n3iwf-5cb9b46f5b-bpxff",
+   "type": "transport",
+   "domain": "telco-core",
+   "function": "n3iwf",
+   "pod": "n3iwf-5cb9b46f5b-bpxff",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 18,
+   "name": "telco-core/nef-69f7cf67c8-s6fxh",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "nef",
+   "pod": "nef-69f7cf67c8-s6fxh",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 19,
+   "name": "telco-core/nrf-76df55557c-q77xj",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "nrf",
+   "pod": "nrf-76df55557c-q77xj",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 20,
+   "name": "telco-core/nssaaf-69bd4c95b5-6bwcr",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "nssaaf",
+   "pod": "nssaaf-69bd4c95b5-6bwcr",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 21,
+   "name": "telco-core/nssf-7f94f7c9cc-lv425",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "nssf",
+   "pod": "nssf-7f94f7c9cc-lv425",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 22,
+   "name": "telco-core/nwdaf-6fd7dbdff-2tg96",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "nwdaf",
+   "pod": "nwdaf-6fd7dbdff-2tg96",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 23,
+   "name": "telco-core/pcf-5656c58f8d-qhwln",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "pcf",
+   "pod": "pcf-5656c58f8d-qhwln",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 24,
+   "name": "telco-core/pcscf-779566884-ccqjn",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "pcscf",
+   "pod": "pcscf-779566884-ccqjn",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 25,
+   "name": "telco-core/scp-59d96b77d8-g9bxd",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "scp",
+   "pod": "scp-59d96b77d8-g9bxd",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 26,
+   "name": "telco-core/scscf-74bcd44cf8-xqlkg",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "scscf",
+   "pod": "scscf-74bcd44cf8-xqlkg",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 27,
+   "name": "telco-core/sepp-69db69bcbf-dg4k6",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "sepp",
+   "pod": "sepp-69db69bcbf-dg4k6",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 28,
+   "name": "telco-core/smf-54848f9888-rtbw2",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "smf",
+   "pod": "smf-54848f9888-rtbw2",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 29,
+   "name": "telco-core/tsctsf-9675b8fff-ctg4r",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "tsctsf",
+   "pod": "tsctsf-9675b8fff-ctg4r",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 30,
+   "name": "telco-core/udm-5d7668d4c5-djm8d",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "udm",
+   "pod": "udm-5d7668d4c5-djm8d",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 31,
+   "name": "telco-core/udr-7857fc9df8-tq6fq",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "udr",
+   "pod": "udr-7857fc9df8-tq6fq",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 32,
+   "name": "telco-core/udsf-7d6cd548ff-c8kzr",
+   "type": "control",
+   "domain": "telco-core",
+   "function": "udsf",
+   "pod": "udsf-7d6cd548ff-c8kzr",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 33,
+   "name": "telco-core/upf-9f7489cf9-qr4dm",
+   "type": "user_plane",
+   "domain": "telco-core",
+   "function": "upf",
+   "pod": "upf-9f7489cf9-qr4dm",
+   "namespace": "telco-core"
+  },
+  {
+   "id": 34,
+   "name": "telco-smo/o2ims-shim-595d99678d-7x94g",
+   "type": "control",
+   "domain": "telco-smo",
+   "function": "o2ims-shim",
+   "pod": "o2ims-shim-595d99678d-7x94g",
+   "namespace": "telco-smo"
+  },
+  {
+   "id": 35,
+   "name": "telco-smo/ocloud-699c9cb595-72pt8",
+   "type": "transport",
+   "domain": "telco-smo",
+   "function": "ocloud",
+   "pod": "ocloud-699c9cb595-72pt8",
+   "namespace": "telco-smo"
+  },
+  {
+   "id": 36,
+   "name": "telco-smo/ptp-bridge-7f5c98d449-st8f9",
+   "type": "transport",
+   "domain": "telco-smo",
+   "function": "ptp-bridge",
+   "pod": "ptp-bridge-7f5c98d449-st8f9",
+   "namespace": "telco-smo"
+  },
+  {
+   "id": 37,
+   "name": "telco-smo/r1-5c749d7489-9gg5k",
+   "type": "control",
+   "domain": "telco-smo",
+   "function": "r1",
+   "pod": "r1-5c749d7489-9gg5k",
+   "namespace": "telco-smo"
+  },
+  {
+   "id": 38,
+   "name": "telco-smo/smo-7446cfd766-82kq4",
+   "type": "control",
+   "domain": "telco-smo",
+   "function": "smo",
+   "pod": "smo-7446cfd766-82kq4",
+   "namespace": "telco-smo"
+  },
+  {
+   "id": 39,
+   "name": "telco-bss-oss/bss-billing-67c79f699d-4h77l",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "bss-billing",
+   "pod": "bss-billing-67c79f699d-4h77l",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 40,
+   "name": "telco-bss-oss/bss-storefront-6588d45688-4g9bc",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "bss-storefront",
+   "pod": "bss-storefront-6588d45688-4g9bc",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 41,
+   "name": "telco-bss-oss/bss-storefront-frontend-6c7dd7d479-ptkpz",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "bss-storefront-frontend",
+   "pod": "bss-storefront-frontend-6c7dd7d479-ptkpz",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 42,
+   "name": "telco-bss-oss/event-store-d95bf9ff7-qjb4n",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "event-store",
+   "pod": "event-store-d95bf9ff7-qjb4n",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 43,
+   "name": "telco-bss-oss/evidence-77448c4b96-hhsl6",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "evidence",
+   "pod": "evidence-77448c4b96-hhsl6",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 44,
+   "name": "telco-bss-oss/frontend-gateway-58c4956f5c-kxs4d",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "frontend-gateway",
+   "pod": "frontend-gateway-58c4956f5c-kxs4d",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 45,
+   "name": "telco-bss-oss/oss-console-frontend-d568848d4-kcxt8",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "oss-console-frontend",
+   "pod": "oss-console-frontend-d568848d4-kcxt8",
+   "namespace": "telco-bss-oss"
+  },
+  {
+   "id": 46,
+   "name": "telco-bss-oss/oss-inventory-859cc696b6-8lzgb",
+   "type": "control",
+   "domain": "telco-bss-oss",
+   "function": "oss-inventory",
+   "pod": "oss-inventory-859cc696b6-8lzgb",
+   "namespace": "telco-bss-oss"
+  }
+ ],
+ "edges": [
+  {
+   "src": 4,
+   "dst": 3,
+   "relation": "fronthaul_feeds"
+  },
+  {
+   "src": 3,
+   "dst": 2,
+   "relation": "f1u_feeds"
+  },
+  {
+   "src": 3,
+   "dst": 1,
+   "relation": "f1c_feeds"
+  },
+  {
+   "src": 2,
+   "dst": 33,
+   "relation": "n3_feeds"
+  },
+  {
+   "src": 1,
+   "dst": 6,
+   "relation": "n2_signals"
+  },
+  {
+   "src": 0,
+   "dst": 3,
+   "relation": "e2_controls"
+  },
+  {
+   "src": 0,
+   "dst": 1,
+   "relation": "e2_controls"
+  },
+  {
+   "src": 28,
+   "dst": 33,
+   "relation": "n4_controls"
+  },
+  {
+   "src": 19,
+   "dst": 6,
+   "relation": "discovery_serves"
+  },
+  {
+   "src": 19,
+   "dst": 28,
+   "relation": "discovery_serves"
+  },
+  {
+   "src": 19,
+   "dst": 7,
+   "relation": "discovery_serves"
+  },
+  {
+   "src": 19,
+   "dst": 30,
+   "relation": "discovery_serves"
+  },
+  {
+   "src": 19,
+   "dst": 23,
+   "relation": "discovery_serves"
+  },
+  {
+   "src": 19,
+   "dst": 21,
+   "relation": "discovery_serves"
+  },
+  {
+   "src": 25,
+   "dst": 6,
+   "relation": "proxies"
+  },
+  {
+   "src": 25,
+   "dst": 28,
+   "relation": "proxies"
+  },
+  {
+   "src": 31,
+   "dst": 30,
+   "relation": "repository_serves"
+  },
+  {
+   "src": 31,
+   "dst": 23,
+   "relation": "repository_serves"
+  },
+  {
+   "src": 30,
+   "dst": 7,
+   "relation": "subscriber_serves"
+  },
+  {
+   "src": 30,
+   "dst": 6,
+   "relation": "subscriber_serves"
+  },
+  {
+   "src": 7,
+   "dst": 6,
+   "relation": "authenticates"
+  },
+  {
+   "src": 6,
+   "dst": 28,
+   "relation": "session_triggers"
+  },
+  {
+   "src": 23,
+   "dst": 28,
+   "relation": "policy_governs"
+  },
+  {
+   "src": 10,
+   "dst": 28,
+   "relation": "charging_governs"
+  },
+  {
+   "src": 21,
+   "dst": 6,
+   "relation": "slice_selects"
+  },
+  {
+   "src": 32,
+   "dst": 31,
+   "relation": "state_serves"
+  },
+  {
+   "src": 11,
+   "dst": 6,
+   "relation": "equipment_checks"
+  },
+  {
+   "src": 8,
+   "dst": 23,
+   "relation": "binding_serves"
+  },
+  {
+   "src": 14,
+   "dst": 13,
+   "relation": "subscriber_serves"
+  },
+  {
+   "src": 13,
+   "dst": 26,
+   "relation": "routes"
+  },
+  {
+   "src": 26,
+   "dst": 24,
+   "relation": "routes"
+  },
+  {
+   "src": 16,
+   "dst": 26,
+   "relation": "media_serves"
+  },
+  {
+   "src": 18,
+   "dst": 9,
+   "relation": "exposes"
+  },
+  {
+   "src": 22,
+   "dst": 23,
+   "relation": "analytics_informs"
+  },
+  {
+   "src": 12,
+   "dst": 15,
+   "relation": "location_requests"
+  },
+  {
+   "src": 27,
+   "dst": 6,
+   "relation": "roaming_serves"
+  },
+  {
+   "src": 17,
+   "dst": 6,
+   "relation": "untrusted_access"
+  },
+  {
+   "src": 29,
+   "dst": 23,
+   "relation": "tsc_governs"
+  },
+  {
+   "src": 20,
+   "dst": 21,
+   "relation": "slice_auth"
+  },
+  {
+   "src": 35,
+   "dst": 3,
+   "relation": "hosts"
+  },
+  {
+   "src": 35,
+   "dst": 1,
+   "relation": "hosts"
+  },
+  {
+   "src": 36,
+   "dst": 3,
+   "relation": "timing_feeds"
+  },
+  {
+   "src": 38,
+   "dst": 0,
+   "relation": "manages"
+  },
+  {
+   "src": 34,
+   "dst": 35,
+   "relation": "manages"
+  },
+  {
+   "src": 37,
+   "dst": 0,
+   "relation": "r1_serves"
+  },
+  {
+   "src": 46,
+   "dst": 44,
+   "relation": "inventory_serves"
+  },
+  {
+   "src": 42,
+   "dst": 46,
+   "relation": "events_feed"
+  },
+  {
+   "src": 44,
+   "dst": 40,
+   "relation": "gateway_serves"
+  },
+  {
+   "src": 39,
+   "dst": 40,
+   "relation": "billing_serves"
+  },
+  {
+   "src": 43,
+   "dst": 45,
+   "relation": "evidence_feeds"
+  },
+  {
+   "src": 40,
+   "dst": 41,
+   "relation": "serves"
+  }
+ ]
+}
