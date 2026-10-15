@@ -1,0 +1,79 @@
+@prefix rct:  <https://github.com/dkypuros/geometric-network-healing/onprem/ontology#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# RAN + Core + Transport vocabulary for the on-premises root-cause service.
+#
+# As with the parent ontology, this is not documentation. rct:coupling is beta_r in
+#     M = rho I + sum_r beta_r P_r
+# and the values here are mirrored in onprem/topology/build_ran_core.py. Change one and the
+# operator changes, which changes the residual, which changes the answer.
+#
+# Stability requires max(beta_r) / (1 - rho) < 1. At rho = 0.85 that caps any coupling at 0.15.
+# The service refuses to load a topology that violates it.
+
+<https://github.com/dkypuros/geometric-network-healing/onprem/ontology>
+    a owl:Ontology ; owl:versionInfo "0.1.0" ;
+    rdfs:comment "Node classes, propagation relations and couplings for a 4G/5G RAN, Core and Transport graph." .
+
+rct:coupling a owl:DatatypeProperty ; rdfs:range xsd:decimal ;
+    rdfs:comment "beta_r: fraction of a cause's degradation its effects inherit per step." .
+
+#### classes
+rct:NetworkElement a owl:Class .
+rct:CoreElement      rdfs:subClassOf rct:NetworkElement .
+rct:TransportElement rdfs:subClassOf rct:NetworkElement .
+rct:RANElement       rdfs:subClassOf rct:NetworkElement .
+rct:CoverageElement  rdfs:subClassOf rct:NetworkElement .
+
+rct:ControlPlaneFunction rdfs:subClassOf rct:CoreElement ;
+    rdfs:comment "Degrades sessions without carrying their user plane, hence weak coupling." .
+rct:UserPlaneFunction    rdfs:subClassOf rct:CoreElement .
+
+rct:HSS rdfs:subClassOf rct:ControlPlaneFunction ; rct:pythonName "hss" .
+rct:MME rdfs:subClassOf rct:ControlPlaneFunction ; rct:pythonName "mme" .
+rct:AMF rdfs:subClassOf rct:ControlPlaneFunction ; rct:pythonName "amf" .
+rct:SMF rdfs:subClassOf rct:ControlPlaneFunction ; rct:pythonName "smf" .
+rct:UPF rdfs:subClassOf rct:UserPlaneFunction    ; rct:pythonName "upf" .
+rct:AGG rdfs:subClassOf rct:TransportElement ; rct:pythonName "agg" ;
+    rdfs:comment "Aggregation router. Highest-coupling element in the graph." .
+rct:CSR rdfs:subClassOf rct:TransportElement ; rct:pythonName "csr" ;
+    rdfs:comment "Cell-site router." .
+rct:ENodeB rdfs:subClassOf rct:RANElement ; rct:pythonName "enodeb" .
+rct:GNodeB rdfs:subClassOf rct:RANElement ; rct:pythonName "gnodeb" .
+rct:Sector rdfs:subClassOf rct:RANElement ; rct:pythonName "sector" ;
+    rdfs:comment "Carries revenue density and a business region profile." .
+rct:Hexbin rdfs:subClassOf rct:CoverageElement ; rct:pythonName "hexbin" ;
+    rdfs:comment "H3 cell. The geographic surface on which degradation is observed." .
+
+#### relation groups, which are the weight-tying structure
+rct:propagatesTo a owl:ObjectProperty .
+rct:feeds    rdfs:subPropertyOf rct:propagatesTo ; rdfs:comment "Carries transport or bearer capacity. Strong." .
+rct:manages  rdfs:subPropertyOf rct:propagatesTo ; rdfs:comment "Governs signalling or session state only. Weak." .
+rct:covers   rdfs:subPropertyOf rct:propagatesTo ; rdfs:comment "Exposes degradation to a geographic surface." .
+
+#### relations, with the couplings that define the operator
+rct:aggFeedsCsr       rdfs:subPropertyOf rct:feeds ; rdfs:domain rct:AGG ; rdfs:range rct:CSR ;
+    rct:pythonName "agg_feeds_csr" ; rct:coupling 0.14 .
+rct:csrBackhaulsEnodeb rdfs:subPropertyOf rct:feeds ; rdfs:domain rct:CSR ; rdfs:range rct:ENodeB ;
+    rct:pythonName "csr_backhauls_enodeb" ; rct:coupling 0.13 .
+rct:csrBackhaulsGnodeb rdfs:subPropertyOf rct:feeds ; rdfs:domain rct:CSR ; rdfs:range rct:GNodeB ;
+    rct:pythonName "csr_backhauls_gnodeb" ; rct:coupling 0.13 .
+rct:coreFeedsUpf      rdfs:subPropertyOf rct:feeds ; rdfs:domain rct:AGG ; rdfs:range rct:UPF ;
+    rct:pythonName "core_feeds_upf" ; rct:coupling 0.12 .
+rct:enodebServesSector rdfs:subPropertyOf rct:feeds ; rdfs:domain rct:ENodeB ; rdfs:range rct:Sector ;
+    rct:pythonName "enodeb_serves_sector" ; rct:coupling 0.11 .
+rct:gnodebServesSector rdfs:subPropertyOf rct:feeds ; rdfs:domain rct:GNodeB ; rdfs:range rct:Sector ;
+    rct:pythonName "gnodeb_serves_sector" ; rct:coupling 0.11 .
+rct:sectorCoversHexbin rdfs:subPropertyOf rct:covers ; rdfs:domain rct:Sector ; rdfs:range rct:Hexbin ;
+    rct:pythonName "sector_covers_hexbin" ; rct:coupling 0.09 .
+rct:hssAuthenticatesMme rdfs:subPropertyOf rct:manages ; rdfs:domain rct:HSS ; rdfs:range rct:MME ;
+    rct:pythonName "hss_authenticates_mme" ; rct:coupling 0.05 .
+rct:mmeManagesEnodeb  rdfs:subPropertyOf rct:manages ; rdfs:domain rct:MME ; rdfs:range rct:ENodeB ;
+    rct:pythonName "mme_manages_enodeb" ; rct:coupling 0.04 ;
+    rdfs:comment "Published graphs usually name this inverse, 'eNodeB managed_by MME'. Same edge, read the other way." .
+rct:amfManagesGnodeb  rdfs:subPropertyOf rct:manages ; rdfs:domain rct:AMF ; rdfs:range rct:GNodeB ;
+    rct:pythonName "amf_manages_gnodeb" ; rct:coupling 0.04 .
+rct:smfControlsUpf    rdfs:subPropertyOf rct:manages ; rdfs:domain rct:SMF ; rdfs:range rct:UPF ;
+    rct:pythonName "smf_controls_upf" ; rct:coupling 0.04 .

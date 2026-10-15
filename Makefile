@@ -16,6 +16,15 @@ pdf:              ## render results into the monograph and README, then compile
 	python3 scripts/results_to_tex.py && python3 scripts/results_to_readme.py
 	cd docs/math && latexmk -pdf -interaction=nonstopmode main.tex > /dev/null && cp main.pdf geometric-network-healing.pdf
 
+onprem-topology:  ## regenerate the RAN/Core/Transport topology for the on-prem service
+	uv run python onprem/topology/build_ran_core.py
+
+onprem-demo:      ## inject a fault, locate it, explain it (30 seconds)
+	uv run python onprem/demo.py
+
+onprem-serve:     ## run the deterministic root-cause service on :8080
+	cd onprem && uv run python -m rca_service.server --topology topology/ran_core_transport.json
+
 ontology:         ## show the ontology's relation vocabulary and couplings
 	uv run python -m gnn_healing.ontology
 

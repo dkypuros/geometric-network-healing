@@ -32,3 +32,4 @@ deploy/oberon/*-ca.crt
 deploy/oberon/kubeconfig*
 deploy/oberon/results/
 *.kubeconfig
+onprem/**/__pycache__/

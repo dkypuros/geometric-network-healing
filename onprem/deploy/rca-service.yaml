@@ -1,0 +1,62 @@
+# One Deployment, one Service, one Route. Nothing else is installed.
+# Runs under the restricted-v2 SCC: no fixed UID, no privilege, read-only root filesystem.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rca-service
+  labels: { app: rca-service }
+spec:
+  replicas: 2                       # the workload is single-threaded by design; scale by replica
+  selector: { matchLabels: { app: rca-service } }
+  template:
+    metadata:
+      labels: { app: rca-service }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: rca
+          image: rca-service:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080, name: http }]
+          env:
+            # The operator is dense linear algebra on a small matrix. Threading it costs more
+            # than it saves; measured 3568x worse at 256 threads on a Xeon 6767P.
+            - { name: OMP_NUM_THREADS, value: "1" }
+            - { name: MKL_NUM_THREADS, value: "1" }
+            - { name: OPENBLAS_NUM_THREADS, value: "1" }
+          resources:
+            requests: { cpu: "500m", memory: 1Gi }
+            limits:   { cpu: "2",    memory: 4Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+      volumes: [{ name: tmp, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rca-service
+spec:
+  selector: { app: rca-service }
+  ports: [{ name: http, port: 8080, targetPort: http }]
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: rca-service
+spec:
+  to: { kind: Service, name: rca-service }
+  port: { targetPort: http }
+  tls: { termination: edge, insecureEdgeTerminationPolicy: Redirect }

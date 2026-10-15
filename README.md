@@ -140,6 +140,22 @@ them. The sharpest one: the change-risk concurrency policy in
 [`select_order()`](src/gnn_healing/intent/biem.py#L53) uses a per-process set, which is correct for
 the single-loop experiment here and breaks the moment two sites heal at once.
 
+## An on-premises service you can hand to someone
+
+[`onprem/`](onprem/) packages the method as a deterministic root-cause service: one container,
+numpy, a topology file, no model weights and no egress. On a 781-node RAN, Core and Transport
+graph it locates the origin of **27 of 27 injected faults across 8 node types in 172 µs per
+step**, and the explanation it returns is the residual itself, one number per node.
+
+```bash
+make onprem-demo      # inject a transport fault, find it, explain it
+make onprem-serve     # the service on :8080
+```
+
+It is topology-agnostic: hand it any typed directed graph with couplings and it builds the
+operator. It refuses a topology whose couplings would make faults amplify instead of attenuate.
+See [onprem/README.md](onprem/README.md), which also states plainly what it does not do.
+
 ## The ontology is load-bearing
 
 [`docs/ontology/network-healing.ttl`](docs/ontology/network-healing.ttl) is not documentation.
@@ -219,6 +235,7 @@ docs/flatness/    "One Node": the read-off vs the trained GNN, experiments E1-E6
 docs/ontology/    the relation vocabulary and its couplings, in Turtle
 docs/nvidia.md    the accelerated path
 docs/state-and-coordination.md   deployment state, where Redis fits, known gaps
+onprem/           deterministic root-cause service: container, API, OpenShift manifests
 deploy/oberon/    one Job to run all of this on Intel Xeon 6 with AMX, no GPU
 scripts/          oberon_bench.py, flatness_experiments.py, results renderers
 docs/industry-comparison.md   how this relates to a 2026 TM Forum Catalyst of the same shape
