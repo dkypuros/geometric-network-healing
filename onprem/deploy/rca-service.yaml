@@ -18,7 +18,9 @@ spec:
       containers:
         - name: rca
           image: rca-service:latest
-          imagePullPolicy: IfNotPresent
+          # Always, not IfNotPresent: a :latest tag with IfNotPresent silently serves a stale
+          # cached layer after a rebuild. Pin to a digest in anything that matters.
+          imagePullPolicy: Always
           ports: [{ containerPort: 8080, name: http }]
           env:
             # The operator is dense linear algebra on a small matrix. Threading it costs more
