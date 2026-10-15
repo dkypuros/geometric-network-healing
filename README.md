@@ -1,35 +1,49 @@
 # Geometric Network Healing
 
-**Geometric deep learning for business-aware, self-healing telecom networks. Open math, open code, NVIDIA-accelerated.**
+**Root cause as the support of a residual. Solve the equations instead of learning them.**
 
-A telecom network is not a grid. It is a heterogeneous directed graph whose node labels carry no
-information, whose faults propagate along typed dependency edges, and whose business value sits in
-a few revenue-dense cells. This repository derives, from the geometric deep learning blueprint, the
-learning system that:
+I build network root-cause methods that solve the equations instead of learning them. On a network
+whose propagation operator is known or identifiable, the root cause is the support of a residual:
+apply the operator to the degradation field and read where it is not zero. With zero learned
+parameters this matches a 241k-parameter graph network on detection, false alarms and root cause,
+and the explanation it gives an operator is the equation rather than an attention weight. I ran
+five experiments designed to separate the two and published all of them, including the one where
+the learned model wins. I have a lab with a real 5G core and RAN on Intel Xeon 6, and what I need
+is one month of real topology and telemetry to find out whether this survives contact with a
+production network.
 
-- detects **silent degradation** with no alarm and no static KPI threshold,
-- ranks the **root cause across RAN, Core and Transport** from one softmax over the whole graph,
-- orders remediation by **revenue at risk under a resource budget**, so the *same fault gets a
-  different response* depending on who it hurts,
-- closes the loop through **TMF921-shaped intents and TMF641-shaped service orders**, verifies, and
-  re-triggers.
+```
+d(t+1) - M d(t)  =  s(t)        zero everywhere except the origin
+M = rho*I + sum_r beta_r P_r    the operator, couplings declared in the ontology
+```
 
-Every numbered equation in the monograph maps to a module. Every claim is measured on a synthetic
-digital twin with injected faults against calibrated graph-free baselines. One command reproduces
-the table.
+Start here: **[docs/the-method.md](docs/the-method.md)**, the method in one page, including what
+is proven, what is measured, and what is still open.
 
 ![System architecture](docs/design/architecture.png)
 
-## The claim
+## The position
 
-The learning stack of a business-aware GNN-healing system is mathematics anyone can implement with
-the topology and the KPI history. Symmetry group: node permutation. Operator class: relational
-message passing with transposed relations. Fault model: directed diffusion on the causal graph.
-Detection: a learned degradation field. Root cause: a learned inverse of the propagation operator.
-Business priority: a one-line knapsack rule the operator can read. The operator's moat is the data,
-not the model.
+Learning should be the residual, not the default. Write down what is already known. The topology
+is known. The way a fault spreads is known, or identifiable from unlabelled telemetry. Put that in
+an operator, and the only thing left to learn is whatever the operator fails to explain.
 
-The monograph is the argument: **[docs/math/geometric-network-healing.pdf](docs/math/geometric-network-healing.pdf)**.
+This repository tests that claim rather than asserting it. It contains a full relational graph
+network of the kind the industry now deploys for this task, trained on simulated incidents, and it
+contains a solver with no parameters at all. Both are run on the same episodes with the same
+calibration, and the comparison is reported in both directions.
+
+| | trained graph network | the read-off |
+|---|---|---|
+| parameters learned | 241,222 | **0** |
+| labelled incidents needed | yes | **none** |
+| detection rate, false alarms | 1.00, zero | 1.00, zero |
+| root cause hit@1 | 1.00 | 1.00 |
+| explanation given | attention over a traversal | the equation itself |
+| when the physics are wrong | **more robust** | degrades, see E6 |
+
+The last row is not a footnote. The experiment designed to embarrass this method succeeded, and
+it is in the paper.
 
 ![Closed loop](docs/design/closed_loop.png)
 
@@ -183,6 +197,7 @@ src/gnn_healing/
   orchestration/  Ch. 8  TMF641-shaped orders, mock orchestrator, closed loop, re-trigger
   evaluation/     Ch. 9  lead time, hit@k, triage reduction, exposure
   cli.py                 gnn-healing pipeline | twin | backend
+docs/the-method.md   the method in one page: proven, measured, and still open
 docs/math/        the monograph (LaTeX, PDF committed)
 docs/design/      TikZ architecture diagrams (source + PNG)
 docs/flatness/    "One Node": the read-off vs the trained GNN, experiments E1-E6
