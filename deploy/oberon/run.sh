@@ -27,7 +27,7 @@ if ! kubectl auth whoami >/dev/null 2>&1; then
   Log in, then re-run this script. In Claude Code you can run it inline with a
   leading "!" so the output lands in the conversation:
 
-    ! oc login https://api.oberon.fm2aihpcsed.com:6443 -u dkypuros \
+    ! oc login https://api.<your-cluster> -u <user> \
         --certificate-authority=$HOME/.kube/oberon-combined-ca.crt
 
   The combined CA has already been generated at ~/.kube/oberon-combined-ca.crt

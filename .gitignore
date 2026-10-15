@@ -34,3 +34,8 @@ deploy/oberon/results/*.log
 !deploy/oberon/results/xeon6767p-benchmark.md
 *.kubeconfig
 onprem/**/__pycache__/
+
+# Local-only: internal lab hostnames and endpoints, never published
+.local/
+LOCAL.md
+*-endpoints.md

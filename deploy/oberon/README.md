@@ -33,7 +33,7 @@ Everything goes to stdout, so `kubectl logs` is the entire result. The runner sa
 ```bash
 # 1. log in. Tokens on Oberon last about 24 hours, so this is usually the only manual step.
 #    The combined CA is required because the OAuth redirect goes to *.apps.
-oc login https://api.oberon.fm2aihpcsed.com:6443 -u dkypuros \
+oc login https://api.<your-cluster> -u <user> \
     --certificate-authority=$HOME/.kube/oberon-combined-ca.crt
 
 # 2. deploy, follow, and save

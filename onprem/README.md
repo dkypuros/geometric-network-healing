@@ -30,12 +30,18 @@ On the included RAN, Core and Transport topology of 781 nodes and 996 edges:
 Faults were injected at aggregation routers, cell-site routers, eNodeBs, gNodeBs, UPFs, MMEs,
 sectors and the HSS. Every one was located.
 
+## Demoing it
+
+[`DEMO.md`](DEMO.md) is the use case and a five-minute talk track: what to click, what to say at
+each of the three panels, the numbers that land, the limits to state before anyone asks, and the
+questions that come back.
+
 ## Running now
 
 Deployed on the lab cluster, two replicas, built in-cluster from this directory:
 
 ```
-https://rca-service-gnn-healing.apps.oberon.fm2aihpcsed.com
+https://rca-service-<namespace>.apps.<your-cluster>
 ```
 
 | | |

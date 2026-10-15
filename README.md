@@ -231,7 +231,7 @@ bare-metal Single Node OpenShift cluster with an Intel Xeon 6 (Granite Rapids), 
 argued to suit, so it is the one worth measuring on.
 
 ```bash
-oc login https://api.oberon.fm2aihpcsed.com:6443 -u <user> \
+oc login https://api.<your-cluster> -u <user> \
     --certificate-authority=$HOME/.kube/oberon-combined-ca.crt
 ./deploy/oberon/run.sh
 ```
