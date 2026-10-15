@@ -30,6 +30,7 @@ docs/flatness/*.out
 deploy/oberon/.env
 deploy/oberon/*-ca.crt
 deploy/oberon/kubeconfig*
-deploy/oberon/results/
+deploy/oberon/results/*.log
+!deploy/oberon/results/xeon6767p-benchmark.md
 *.kubeconfig
 onprem/**/__pycache__/
