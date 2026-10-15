@@ -226,7 +226,7 @@ quiet most of the time. Only the tail separates them. The check also shows that 
 reversed edges score identically even in the control, so direction comes from the operator's
 structure and not from any asymmetry in the raw statistics.
 
-Full write-up: `experiments/oberon_live/README.md`.
+Full write-up: `experiments/oberon_live/readme.md`.
 
 ---
 

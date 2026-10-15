@@ -182,7 +182,7 @@ make onprem-serve     # the service on :8080
 
 It is topology-agnostic: hand it any typed directed graph with couplings and it builds the
 operator. It refuses a topology whose couplings would make faults amplify instead of attenuate.
-See [onprem/README.md](onprem/README.md), which also states plainly what it does not do.
+See [onprem/readme.md](onprem/readme.md), which also states plainly what it does not do.
 
 ## The ontology is load-bearing
 
@@ -241,7 +241,7 @@ It installs nothing into the cluster beyond that one Job, and
 thread scaling, bfloat16 against float32 to see whether AMX engages, size scaling until the
 dense covariance becomes the wall, and a check that the published numbers reproduce on
 different silicon. Predictions are written down in the
-[deploy README](deploy/oberon/README.md) before the run so the result can contradict them.
+[deploy README](deploy/oberon/readme.md) before the run so the result can contradict them.
 
 ## Layout
 

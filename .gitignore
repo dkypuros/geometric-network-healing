@@ -37,5 +37,5 @@ onprem/**/__pycache__/
 
 # Local-only: internal lab hostnames and endpoints, never published
 .local/
-LOCAL.md
+local.md
 *-endpoints.md

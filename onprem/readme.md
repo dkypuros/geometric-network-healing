@@ -32,7 +32,7 @@ sectors and the HSS. Every one was located.
 
 ## Demoing it
 
-[`DEMO.md`](DEMO.md) is the use case and a five-minute talk track: what to click, what to say at
+[`demo.md`](demo.md) is the use case and a five-minute talk track: what to click, what to say at
 each of the three panels, the numbers that land, the limits to state before anyone asks, and the
 questions that come back.
 
