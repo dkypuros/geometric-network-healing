@@ -111,6 +111,17 @@ Twin: 74 nodes, 130 edges. Fault episodes: 32, nominal: 8. Runtime 647.1 s.
 *(CPU, fixed seed; regenerate with `make pipeline`.)*
 <!-- RESULTS:END -->
 
+## The full record
+
+[`docs/build-log.md`](docs/build-log.md) is the audit trail: every experiment with its numbers,
+every defect found and what was done about it, the two experiments this method loses, and an
+explicit list of what is still open. It is written so someone who was not here can check the
+work rather than take it on trust.
+
+The honest summary at the top of that list: every number in this repository comes from a
+simulator written for this repository. That is the gap that matters, and no amount of further
+engineering closes it.
+
 ## Reproduce
 
 ```bash
@@ -228,6 +239,7 @@ src/gnn_healing/
   evaluation/     Ch. 9  lead time, hit@k, triage reduction, exposure
   cli.py                 gnn-healing pipeline | twin | backend
 docs/what-the-demo-shows.md   the deployed industry system, read off its own UI
+docs/build-log.md the full record: every measurement, every defect found, everything open
 docs/the-method.md   the method in one page: proven, measured, and still open
 docs/math/        the monograph (LaTeX, PDF committed)
 docs/design/      TikZ architecture diagrams (source + PNG)
