@@ -30,7 +30,32 @@ On the included RAN, Core and Transport topology of 781 nodes and 996 edges:
 Faults were injected at aggregation routers, cell-site routers, eNodeBs, gNodeBs, UPFs, MMEs,
 sectors and the HSS. Every one was located.
 
-## Try it
+## Running now
+
+Deployed on the lab cluster, two replicas, built in-cluster from this directory:
+
+```
+https://rca-service-gnn-healing.apps.oberon.fm2aihpcsed.com
+```
+
+| | |
+|---|---|
+| operator | 781 nodes, 996 edges, stability 0.933, built in 1.4 s at pod start |
+| learned parameters | 0 |
+| live demo | `GET /v1/demo?kind=agg` injects a fault and locates it |
+
+The page itself is one screen. It exists to show a single thing: the residual, one bar per node,
+where one bar stands over hundreds of flat ones. That picture is the argument. Alongside it sit
+the finding and the TMF921-shaped healing intent with its evidence block, so the claim can be
+audited rather than trusted.
+
+```bash
+oc new-build --binary --name=rca-service --strategy=docker -n gnn-healing
+oc start-build rca-service --from-dir=onprem --follow -n gnn-healing
+kubectl -n gnn-healing apply -f onprem/deploy/rca-service.yaml
+```
+
+## Try it locally
 
 ```bash
 python onprem/demo.py                    # inject, locate, explain, 30 seconds

@@ -1,0 +1,2 @@
+NAME     CPU   MEM           KERNEL
+oberon   256   527542468Ki   5.14.0-687.13.1.el9_8.x86_64

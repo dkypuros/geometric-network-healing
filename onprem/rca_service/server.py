@@ -19,6 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 
 from .core import Topology, RootCauseEngine, healing_intent
+from .ui import PAGE
 
 log = logging.getLogger("rca")
 STATE: dict = {"engine": None, "topology": None, "built_at": None, "build_seconds": None}
@@ -73,6 +74,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
+            if self.path in ("/", "/index.html"):
+                body = PAGE.encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            if self.path.startswith("/v1/demo"):
+                return self._demo()
             if self.path == "/healthz":
                 return self._send(200, {"status": "ok"})
             if self.path == "/readyz":
@@ -100,6 +109,30 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:                                    # noqa: BLE001
             log.exception("GET failed")
             self._send(500, {"error": str(exc)})
+
+    def _demo(self):
+        """Inject a fault server-side and locate it. Synthetic counters, real solver."""
+        from urllib.parse import urlparse, parse_qs
+        from .simulate import inject
+        eng, topo = STATE["engine"], STATE["topology"]
+        if eng is None:
+            return self._send(503, {"error": "no topology loaded"})
+        kind = (parse_qs(urlparse(self.path).query).get("kind") or ["agg"])[0]
+        cand = [i for i, n in enumerate(topo.nodes) if n["type"] == kind] or [0]
+        v = int(np.random.default_rng().choice(cand))
+        X, _ = inject(topo, eng.M, steps=120, origin=v,
+                      seed=int(time.time()) % 100000)
+        t0 = time.perf_counter(); f = eng.locate(X); el = time.perf_counter() - t0
+        return self._send(200, {
+            "injected": topo.name(v), "found": f.origin_name, "origin_index": f.origin_index,
+            "confidence": f.confidence, "separation_z": f.separation_z,
+            "margin": f.margin_over_runner_up, "blast_radius": len(f.blast_radius),
+            "n_nodes": topo.n, "steps": int(X.shape[0]),
+            "us_per_step": round(el * 1e6 / X.shape[0], 1),
+            "residual": [float(x) for x in f.residual],
+            "top": [{"node": topo.name(i), "value": float(x)} for i, x in f.ranked[:8]],
+            "intent": healing_intent(topo, f),
+        })
 
     def do_POST(self):
         try:
